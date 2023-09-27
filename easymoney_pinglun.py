@@ -36,15 +36,16 @@ def refresh(page, old_list= []):
 
     return new_list
     
-def multi_refresh(n):
+def multi_refresh(n, m):
     old_list = []
-    for page in range(n):
+    for page in range(n, m):
         if page % 20 == 1:
-            time.sleep(random.randint(5,15))
+            time.sleep(random.randint(15,30))
         else:
-            time.sleep(random.randint(2,10))
+            time.sleep(random.randint(4,10))
         old_list = refresh(str(page + 1), old_list)
 
 if __name__ == '__main__':
-    page = sys.argv[1]
-    multi_refresh(int(page))
+    page_from = sys.argv[1]
+    page_to = sys.argv[2]
+    multi_refresh(int(page_from), int(page_to))
