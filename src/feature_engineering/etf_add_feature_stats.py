@@ -8,6 +8,7 @@ from src.feature_engineering.autoregressive_features import *
 # from window_ops.rolling import seasonal_rolling_mean
 from scipy.stats import pearsonr
 import sys
+import os
 
 def calculate_kdj(df, n=9, k_period=3, d_period=3):
     # 计算最高价的 n 天最高价和最低价的 n 天最低价
@@ -113,8 +114,8 @@ def caculate_pearson_corr(data_choose_Kall, code):
 
 def run(code=None):
 
-
-    data = pd.read_parquet("/liubinxu/liubinxu/finance/learning/data/{}.qfq.kdj.parquet".format(code))
+    fdata_dir = os.environ.get('FDATA', '/liubinxu/liubinxu/finance/learning/data')
+    data = pd.read_parquet(fdata_dir + "/{}.qfq.kdj.parquet".format(code))
 
 
     # 择时策略
