@@ -15,12 +15,18 @@ from window_ops.rolling import (
 
 from src.utils.data_utils import _get_32_bit_dtype
 
-ALLOWED_AGG_FUNCS = ["mean", "max", "min", "std", "shapiro_stats", "kurtosis", "skewness", "std_mean"]
+ALLOWED_AGG_FUNCS = ["mean", "max", "min", "std", "shapiro_stats", "kurtosis", "skewness", "std_mean", "exp_mean"]
 def shapiro_stats(data):
     return shapiro(data)[0]
 
 def std_mean(data):
     return np.std(data)/np.mean(data)
+
+def exp_mean(data):
+    alpha = 0.8
+    weights = np.exp(np.linspace(-1.0, 0.0, len(data)) * alpha)
+    weights /= weights.sum()
+    return sum(weights *data)
 # # 计算峰度
 # kurtosis = stats.kurtosis(X)
 
@@ -34,7 +40,8 @@ agg_fun_dict = {
     "std_mean": std_mean,
     "shapiro_stats": shapiro_stats,
     "kurtosis": stats.kurtosis,
-    "skewness": stats.skew
+    "skewness": stats.skew,
+    "exp_mean": exp_mean
 }
 
 

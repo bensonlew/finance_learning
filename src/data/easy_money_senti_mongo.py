@@ -49,6 +49,7 @@ def get_all_data(data):
                     else:
                         print("post id {} not find".format(data_dict['post_id']))
                     cemotion_sentiment = c.predict(post_title)
+                    # print("cemotion_sentiment {}".format(cemotion_sentiment))
                     data_dict["cemotion_sentiment"] = float(cemotion_sentiment)
                     try:
                         insert_data.append(SON(data_dict))

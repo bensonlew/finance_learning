@@ -7,12 +7,13 @@ import pandas as pd
 client = pymongo.MongoClient(uri)
 
 
-data_dir = "/media/liubinxu/UUI/stock_data/"
+data_dir = "/data/finance/"
 
 
 def get_tdx_qfq_etf_min5data(code):
     df = QA_fetch_etf_min(code, "2010-01-01", "2030-01-01", format="pd")
     code_hfq = QA_data_etf_to_fq(df, '01')
+    print(len(code_hfq))
     code_hfq.to_parquet(data_dir + "{}.qfq.parquet".format(code))
 
 
@@ -33,17 +34,24 @@ def find2mongo2df():
     records = coll.find({"time_stamp" : 1632274500.0, "amount": {"$gt": 2000000.0}})
     return records
 
+def find2mongo2df_etfranked():
+    coll = client.quantaxis.etf_rank
+    records = coll.find({"date":"2023-12-04"})
+    return records
+
 if __name__ == "__main__":
-    records = find2mongo2df()
+    # records = find2mongo2df()
+    records = find2mongo2df_etfranked()
+    code_list = [record["code"][2:] for record in records]
     # for record in records:
     #     code = record["code"]
     #     print(code)
     #     get_tdx_qfq_stock_min5data(code)
 
-    for record in records:
-        code = record["code"]
-        print(code)
-        get_tdx_stock_trac(code)
+    # for record in records:
+    #     code = record["code"]
+    #     print(code)
+    #     get_tdx_stock_trac(code)
 
 
 
@@ -113,8 +121,10 @@ if __name__ == "__main__":
     #     "159995",
     #     "159996"
     # ]
-    # for code in code_list:
-    #     get_tdx_qfq_etf_min5data(code)
+    # code_list = ["510050", "512100", "510880", "512690", "159915", "000016", "000852", "399006"]
+    for code in code_list:
+        print("code {}".format(code))
+        get_tdx_qfq_etf_min5data(code)
 
 
 

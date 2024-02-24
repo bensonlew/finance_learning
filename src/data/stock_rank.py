@@ -25,8 +25,8 @@ if __name__ == "__main__":
         # if(etf["code"]< "000901"):
         #     continue
         etf_code = etf["sse"] + etf["code"]
-        if etf["sse"] == "sz" and etf["code"] > "000591" and etf["code"]< "000901":
-            continue
+        # if etf["sse"] == "sz" and (etf["code"] < "000650" and etf["code"] != "000507"):
+        #     continue
         print(etf_code)
         a += 1
         if a == 100:
