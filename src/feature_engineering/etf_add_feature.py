@@ -8,6 +8,7 @@ from src.feature_engineering.autoregressive_features import *
 # from window_ops.rolling import seasonal_rolling_mean
 from scipy.stats import pearsonr
 import sys
+import os
 
 def calculate_kdj(df, n=9, k_period=3, d_period=3, abr=""):
     # 计算最高价的 n 天最高价和最低价的 n 天最低价
@@ -72,14 +73,13 @@ def calculate_spectrum_energy(data):
 
 
 def caculate_pearson_corr(data_choose_Kall, code):
-    
     data_choose_K3_rmnan = data_choose_Kall.dropna(axis=0)
     data_choose_K3_rmnan1 = data_choose_K3_rmnan[data_choose_K3_rmnan["K_choose"] == "type1"]
     data_choose_K3_rmnan3 = data_choose_K3_rmnan[data_choose_K3_rmnan["K_choose"] == "type3"]
     print(len(data_choose_K3_rmnan1))
     print(len(data_choose_K3_rmnan3))
     for data_choose_type in ["type1", "type3"]:
-        print(data_choose_type)
+        # print(data_choose_type)
         data_choose_K3_choose = data_choose_K3_rmnan[data_choose_K3_rmnan["K_choose"] == data_choose_type]
         for close1 in ["target_close1", "target_close2", "target_close5"]:
             target_close = data_choose_K3_choose[close1]
@@ -90,7 +90,7 @@ def caculate_pearson_corr(data_choose_Kall, code):
                 "K_choose", "target_close5", "K_choose_last", "date", "k_last", "k_last3", "datetime"]
             col_list = list(data_choose_K3_choose.columns)
             
-            with open("{}_{}_{}.statcorr.tsv".format(code, data_choose_type, close1), 'w') as fo:
+            with open("{}_kdj.statcorr.tsv".format(code), 'aw') as fo:
 
                 for col in col_list:  
                     if col in clean_col:
@@ -119,7 +119,8 @@ def add_kdj_type(data, k_abr):
     return data
 
 def run(code=None):
-    data = pd.read_parquet("/liubinxu/liubinxu/finance/learning/data/{}.qfq.parquet".format(code))
+    fdata_dir = os.environ.get('FDATA', '/liubinxu/liubinxu/finance/learning/data')
+    data = pd.read_parquet(fdata_dir + "/{}.qfq.parquet".format(code))
     data["datetime"] = data["datetime"].map(str)
     data,fea = add_seasonal_rolling_features(data, seasonal_periods=[48], rolls=[20], column="amount" )
     data,fea = add_seasonal_rolling_features(data, seasonal_periods=[48], rolls=[5], column="amount" )
@@ -166,7 +167,7 @@ def run(code=None):
 
     # data_choose = data[['open', 'close', 'high', 'low', 'vol', 'amount', 'datetime', 'code','date', 'amount_normalize', 'K', 'D', 'J', "close_rolling_480_std", "amount_normalize_rolling_6_mean", "amount_diff_rolling_24_std"]]
     data_choose = data
-    data_choose.to_parquet("/liubinxu/liubinxu/finance/learning/data/{}.qfq.kdj.parquet".format(code))
+    data_choose.to_parquet(fdata_dir + "/{}.qfq.kdj.parquet".format(code))
 
 
     # 择时策略

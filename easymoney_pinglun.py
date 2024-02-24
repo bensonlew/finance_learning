@@ -145,9 +145,9 @@ def parse_pinglun(url):
 
 def multi_refresh(n):
     old_list = []
-    for page in range(n):
+    for page in range(n, m):
         if page % 20 == 1:
-            time.sleep(random.randint(5,15))
+            time.sleep(random.randint(15,30))
         else:
             pass
             # time.sleep(random.randint(2,10))
