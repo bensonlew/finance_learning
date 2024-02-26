@@ -13,6 +13,7 @@ import glob
 
 
 def get_train_data(train_files, amount="amount_normalize20_rolling_96_mean", reg="close480_close2880", reg_type="all", k_type="K18"):
+    print("amount {}".format(amount))
     data_list = list()
     arrs = list()
     amounts = list()
@@ -28,11 +29,11 @@ def get_train_data(train_files, amount="amount_normalize20_rolling_96_mean", reg
         elif reg == "down":
             data["signal"][data[reg]>0] = False
         arr = data['close'].to_numpy()
-        amount = data[amount]
+        amount_data = data[amount]
         signal_choose = data["signal"].to_numpy()
         data_list.append(data)
         arrs.append(arr)
-        amounts.append(amount)
+        amounts.append(amount_data)
         signal_chooses.append(signal_choose)    
     return  arrs,  amounts,  signal_chooses, data_list
 
