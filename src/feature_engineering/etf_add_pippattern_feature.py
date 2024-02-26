@@ -8,6 +8,7 @@ from src.utils.pip_pattern_miner import PIPPatternMiner
 import sys
 import os
 import glob
+from scipy.stats import mannwhitneyu
 
 
 
@@ -50,24 +51,39 @@ def pip_miner_save(pip_miner, file_path):
 
 def pip_miner_stat(pip_miner, data_files, data_list, target_close="target_close5", stat_file="", hold_period=12):
     cluster_martins = []
-    nums = []                                                                                                             
+    nums = []
+    martinss = []                                                                                                           
     for clust_i in range(len(pip_miner._pip_clusters)): # Loop through each cluster
         rec = dict()
         rec2 = dict()
+        martins = []
         for n, data in enumerate(data_list):
             index_code = os.path.basename(data_files[n]).split(".")[0]
             sig = pip_miner._cluster_signals_dict[clust_i][n]
             martin = data_list[n][sig == 1][target_close]
+            martin = martin[~np.isnan(martin)]
             rec[index_code] = len(martin)
             rec2[index_code] = martin.mean()
+            martins += list(martin)[0::hold_period]
         cluster_martins.append(rec2)
         nums.append(rec)
+        martinss.append(martins)
+
+    matrinss_all = []
+    for mal in martinss:
+        matrinss_all += mal
+    mannwhitneyu_p = []
+    for m in martinss:
+        statistic, p_value = mannwhitneyu(matrinss_all, m)
+        mannwhitneyu_p.append(p_value)
+
     df1 = pd.DataFrame(cluster_martins)
     df2 = pd.DataFrame(nums)
     df_stat = pd.DataFrame(df1.apply(np.mean, axis=1))
     df_stat.columns = ["target_mean"]
     df_stat["target_num"] = df2.apply(sum, axis=1)
     df_stat["target_sum"]  = df_stat["target_mean"] * df_stat["target_num"] /hold_period
+    df_stat["mannwhitneyu_p"] = mannwhitneyu_p
     df_stat["clusters"] = df_stat.index
     df_stat = df_stat.sort_values(by=["target_mean"], ascending=False)
     df_stat["num_sum"] = df_stat["target_num"].cumsum()/hold_period
