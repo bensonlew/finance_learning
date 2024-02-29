@@ -25,9 +25,9 @@ def get_train_data(train_files, amount="amount_normalize20_rolling_96_mean", reg
         # data["K_pre"] = data["K"].shift()
         data["signal"] = False
         data["signal"][data["K_choose" + "_" + k_type].isin(["type1", "type3"])] = True
-        if reg == "up":
+        if reg_type == "up":
             data["signal"][data[reg]<0] = False
-        elif reg == "down":
+        elif reg_type == "down":
             data["signal"][data[reg]>0] = False
         arr = data['close'].to_numpy()
         amount_data = data[amount]
@@ -102,7 +102,7 @@ def run(amount="amount_normalize20_rolling_96_mean", reg="close480_close2880", r
     pip_miner = train(n_pips=n_pips, lookback=lookback, hold_period=hold_period, arrs=arrs, amounts=amounts, signal_chooses=signal_chooses)
     file_path = os.path.join(fdata_dir, "train", "_".join([amount, reg, reg_type, k_type, str(n_pips), str(lookback), str(hold_period), str(target_close)]))
     pip_miner_save(pip_miner, file_path)
-    pip_miner_stat(pip_miner, train_data_files, data_list, target_close="target_close5", stat_file=file_path)
+    pip_miner_stat(pip_miner, train_data_files, data_list, target_close="target_close5", stat_file=file_path, hold_period=hold_period)
 
     # data_choose = data[['open', 'close', 'high', 'low', 'vol', 'amount', 'datetime', 'code','date', 'amount_normalize', 'K', 'D', 'J', "close_rolling_480_std", "amount_normalize_rolling_6_mean", "amount_diff_rolling_24_std"]]
 
@@ -119,7 +119,10 @@ if __name__ == "__main__":
     target_close = ["target_close1", "target_close2", "target_close5", "target_close10"]
 
     # run(amount="amount_normalize20_rolling_96_mean", reg="close480_close2880", reg_type="all", k_type="K18", n_pips=7, lookback=960, hold_period=12, target_close="target_close5")
-    
+    import time
+    import random
+    sec = random.randint(0, 1000)
+    time.sleep(sec) 
     run(amount=sys.argv[1], 
         reg=sys.argv[2], 
         reg_type=sys.argv[3], 
