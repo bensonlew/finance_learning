@@ -144,6 +144,23 @@ class PIPPatternMiner:
             perm_martin = self._get_total_performance()
             self._perm_martins.append(perm_martin)
 
+    
+    def test_multi(self, arr: list, vol:list):
+        self.data_list = []
+        self._unique_pip_patterns = []
+        self._unique_pip_indices = []
+        self._unique_pip_datasource=[]
+        n = 0
+        for arr, vol in zip(arr, vol):
+            self._data = arr
+            self.data_list.append(arr)
+            self._amount = vol
+
+            self._test_unique_patterns(n=n)
+            n += 1
+        self._get_test_cluster_signals_multi()
+        
+        
 
     def train_multi(self, arr: list, vol:list, n_reps=-1, returns=None):
         # 多组数据训练
@@ -208,6 +225,51 @@ class PIPPatternMiner:
 
             last_pips_x = pips_x
 
+    def _test_unique_patterns(self, n=None):
+        # Find unique pip patterns in data
+        if n == None:
+            self._unique_pip_indices.clear()
+            self._unique_pip_patterns.clear()
+        
+        last_pips_x = [0] * self._n_pips
+        # print(n, len(self._data), len(self.signal_choose[n]))
+        for i in range(self._lookback - 1, len(self._data) - self._hold_period):
+            if self.signal_choose[n][i] == False:
+                # 筛选部分时间点
+                continue
+            start_i = i - self._lookback + 1
+            window = self._data[start_i: i + 1]
+            pips_x, pips_y = find_pips(window, self._n_pips, 3)
+            pips_x = [j + start_i for j in pips_x]
+            
+            amount_y = [self._amount[x] for x in pips_x]
+            if np.isnan(amount_y[0]):
+                continue
+            # Check internal pips to see if it is the same as last
+            same = True
+            for j in range(1, self._n_pips - 1):
+                if pips_x[j] != last_pips_x[j]:
+                    same = False
+                    break
+            
+            if not same:
+                # Z-Score normalize pattern
+                pips_y = list((np.array(pips_y) - np.mean(pips_y)) / np.std(pips_y))
+                amount_y = list((np.array(amount_y) - np.mean(amount_y)) / np.std(amount_y))
+                corr_list = []
+                for cluster_center in self._cluster_centers:
+                    corr_list.append(
+                        np.corrcoef(pips_y + amount_y, cluster_center)[0][1]
+                    )
+                corr_list = np.array(corr_list)
+                cluster_num = corr_list.argmin()
+                # print(len(self._cluster_centers), cluster_num)
+                self._unique_pip_patterns.append(cluster_num)
+                self._unique_pip_indices.append(i)
+                self._unique_pip_datasource.append(n)
+
+            last_pips_x = pips_x
+
 
     def _kmeans_cluster_patterns(self, amount_clusters):
         # Cluster Patterns
@@ -265,7 +327,20 @@ class PIPPatternMiner:
                 # Fill signal with 1s following pattern identification
                 # for hold period specified
                 signal= self._cluster_signals_dict[n][data_source]
-                signal[arr_i: arr_i + self._hold_period] = 1. 
+                signal[arr_i: arr_i + self._hold_period] = 1.
+
+    def _get_test_cluster_signals_multi(self):
+        self._cluster_signals_dict = dict()
+
+        for n, clust in enumerate(self._pip_clusters): # Loop through each cluster
+            self._cluster_signals_dict[n] = []
+            for adata in self.data_list:
+                signal = np.zeros(len(adata))
+                self._cluster_signals_dict[n].append(signal)
+        for data_source, cluster_n, arr_i in zip(self._unique_pip_datasource, self._unique_pip_patterns, self._unique_pip_indices):
+            # print(data_source, cluster_n, arr_i)
+            signal= self._cluster_signals_dict[cluster_n][data_source]
+            signal[arr_i: arr_i + self._hold_period] = 1. 
             
 
 
