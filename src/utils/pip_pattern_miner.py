@@ -38,6 +38,8 @@ class PIPPatternMiner:
         self._returns = None # Array of next log returns, concurrent with _data
         self.data_list = list()
         self.signal_choose = signal_choose
+        self.amount_type = "all"
+        self.k_range = 300
 
     def get_fit_martin(self):
         return self._fit_martin
@@ -176,7 +178,7 @@ class PIPPatternMiner:
         
 
         search_instance = silhouette_ksearch(
-                    self._unique_pip_patterns, 50, 300, algorithm=silhouette_ksearch_type.KMEANS).process()
+                    self._unique_pip_patterns, self.k_range - 50, self.k_range, algorithm=silhouette_ksearch_type.KMEANS).process()
         
         amount = search_instance.get_amount()
         self._kmeans_cluster_patterns(amount)
@@ -219,7 +221,26 @@ class PIPPatternMiner:
                 # Z-Score normalize pattern
                 pips_y = list((np.array(pips_y) - np.mean(pips_y)) / np.std(pips_y))
                 amount_y = list((np.array(amount_y) - np.mean(amount_y)) / np.std(amount_y))
-                self._unique_pip_patterns.append(pips_y + amount_y)
+
+                # 只选择部分成交量
+                if self.amount_type == "all":
+                    amount_choose = amount_y
+                elif self.amount_type == "half":
+                    if len(amount_y) % 2 == 0:
+                        amount_choose = amount_y[1::2]
+                    else:
+                        amount_choose = amount_y[1::2]
+                elif self.amount_type == "begin_end":
+                    amount_choose = [amount_y[0], amount_y[-1]]
+                elif self.amount_type == "tree":
+                    amount_choose = [amount_y[0], amount_y[int(len(amount_y)/2)], amount_y[-1]]
+                elif self.amount_type == "tail":
+                    amount_choose = [amount_y[0], amount_y[-2], amount_y[-1]]
+                elif self.amount_type == "no":
+                    amount_choose = []
+
+                self._unique_pip_patterns.append(pips_y + amount_choose)
+
                 self._unique_pip_indices.append(i)
                 self._unique_pip_datasource.append(n)
 
