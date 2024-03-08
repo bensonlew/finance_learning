@@ -40,6 +40,7 @@ class PIPPatternMiner:
         self.signal_choose = signal_choose
         self.amount_type = "all"
         self.k_range = 300
+        self.cluster_method = "kmeans"
 
     def get_fit_martin(self):
         return self._fit_martin
@@ -176,12 +177,14 @@ class PIPPatternMiner:
             self._find_unique_patterns(n=n)
             n += 1
         
-
-        search_instance = silhouette_ksearch(
-                    self._unique_pip_patterns, self.k_range - 50, self.k_range, algorithm=silhouette_ksearch_type.KMEANS).process()
-        
-        amount = search_instance.get_amount()
-        self._kmeans_cluster_patterns(amount)
+        if self.cluster_method == "kmeans":
+            search_instance = silhouette_ksearch(
+                        self._unique_pip_patterns, self.k_range - 50, self.k_range, algorithm=silhouette_ksearch_type.KMEANS).process()
+            
+            amount = search_instance.get_amount()
+            self._kmeans_cluster_patterns(amount)
+        elif self.cluster_method == "bi-kmeans":
+            self._bikmeans_cluster_patterns(self.k_range)
 
         self._get_cluster_signals_multi()
         # self._assign_clusters()
@@ -229,7 +232,7 @@ class PIPPatternMiner:
                     if len(amount_y) % 2 == 0:
                         amount_choose = amount_y[1::2]
                     else:
-                        amount_choose = amount_y[1::2]
+                        amount_choose = amount_y[::2]
                 elif self.amount_type == "begin_end":
                     amount_choose = [amount_y[0], amount_y[-1]]
                 elif self.amount_type == "tree":
@@ -277,10 +280,27 @@ class PIPPatternMiner:
                 # Z-Score normalize pattern
                 pips_y = list((np.array(pips_y) - np.mean(pips_y)) / np.std(pips_y))
                 amount_y = list((np.array(amount_y) - np.mean(amount_y)) / np.std(amount_y))
+                if self.amount_type == "all":
+                    amount_choose = amount_y
+                elif self.amount_type == "half":
+                    if len(amount_y) % 2 == 0:
+                        amount_choose = amount_y[1::2]
+                    else:
+                        amount_choose = amount_y[::2]
+                elif self.amount_type == "begin_end":
+                    amount_choose = [amount_y[0], amount_y[-1]]
+                elif self.amount_type == "tree":
+                    amount_choose = [amount_y[0], amount_y[int(len(amount_y)/2)], amount_y[-1]]
+                elif self.amount_type == "tail":
+                    amount_choose = [amount_y[0], amount_y[-2], amount_y[-1]]
+                elif self.amount_type == "no":
+                    amount_choose = []
+
+
                 corr_list = []
                 for cluster_center in self._cluster_centers:
                     corr_list.append(
-                        np.corrcoef(pips_y + amount_y, cluster_center)[0][1]
+                        np.corrcoef(pips_y + amount_choose, cluster_center)[0][1]
                     )
                 corr_list = np.array(corr_list)
                 cluster_num = corr_list.argmin()
@@ -293,6 +313,16 @@ class PIPPatternMiner:
 
 
     def _kmeans_cluster_patterns(self, amount_clusters):
+        # Cluster Patterns
+        initial_centers = kmeans_plusplus_initializer(self._unique_pip_patterns, amount_clusters).initialize()
+        kmeans_instance = kmeans(self._unique_pip_patterns, initial_centers)
+        kmeans_instance.process()
+
+        # Extract clustering results: clusters and their centers
+        self._pip_clusters = kmeans_instance.get_clusters()
+        self._cluster_centers = kmeans_instance.get_centers()
+
+    def _bikmeans_cluster_patterns(self, amount_clusters):
         # Cluster Patterns
         initial_centers = kmeans_plusplus_initializer(self._unique_pip_patterns, amount_clusters).initialize()
         kmeans_instance = kmeans(self._unique_pip_patterns, initial_centers)

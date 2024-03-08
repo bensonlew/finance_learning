@@ -100,16 +100,19 @@ def pip_miner_stat(pip_miner, data_files, data_list, target_close="target_close5
     df_stat.to_csv(stat_file + ".stat.tsv", sep="\t", index=False)
 
 
-def run(amount="amount_normalize20_rolling_96_mean", reg="close480_close2880", reg_type="all", k_type="K18", n_pips=7, lookback=960, hold_period=12, target_close="target_close5", k_range=300, amount_type="all"):
+def run(amount="amount_normalize20_rolling_96_mean", reg="close480_close2880", reg_type="all", k_type="K18", n_pips=7, lookback=960, hold_period=12, target_close="target_close5", k_range=300, amount_type="all", version="1"):
     # data, add_feature = add_corr_feature(data, rolls=[24, 96, 480], column="close", column2="amount_normalize")
     fdata_dir = os.environ.get('FDATA', '/liubinxu/liubinxu/finance/learning/data/')
     train_code_list = ['159905', '159003', '159601', '159606', '159610', '159612', '159619', '159628', '159632', '159636', '159677', '159741', '159814', '159881', '159647', '159650', '159667', '159679', '159681', '159688', '159708', '159718', '159736', '159742', '159747', '159755', '159776', '159781', '159790', '159796', '159805', '159813', '159820', '159828', '159831', '159839', '159841', '159843', '159850', '159852', '159864', '159866', '159869', '159875', '159887', '159892', '159902', '159907', '159915', '159920', '159925', '159930', '159937', '159939', '159941', '159949', '159968', '159972', '159980', '159982', '159992', '159994', '159997', '510050', '510150', '510230', '510310', '510350', '510500', '510580', '510710', '510800', '510900', '511020', '511060', '511220', '511270', '511380', '511620', '511690', '511810', '511880', '511990', '512010', '512070', '512120', '512290', '512400', '512500', '512660', '512680', '512700', '512720', '512810', '512880', '512900', '512950', '513000', '513020', '513060', '513080', '513100', '513120', '513160', '513200', '513280', '513300', '513330', '513380', '513520', '513550', '513600', '513690', '513770', '513860', '513900', '515000', '515050', '515070', '515100', '159952', '510210', '512560', '513030', '513890', '515650', '516640', '515130', '515180', '515220', '515250', '515330', '515390', '515450', '515710', '515790', '515810', '515880', '515980', '516020', '516110', '516160', '516300', '516510', '516780', '516880', '516950', '517090', '518680', '518850']
     test_code_list = ['159001', '159005', '159605', '159607', '159611', '159615', '159625', '159629', '159633', '159637', '159719', '159768', '159859', '159638', '159649', '159655', '159671', '159680', '159682', '159707', '159713', '159732', '159740', '159745', '159750', '159766', '159780', '159783', '159792', '159801', '159806', '159819', '159825', '159830', '159837', '159840', '159842', '159845', '159851', '159857', '159865', '159867', '159870', '159883', '159888', '159901', '159903', '159908', '159919', '159922', '159928', '159934', '159938', '159940', '159943', '159967', '159971', '159977', '159981', '159985', '159993', '159995', '159998', '510100', '510180', '510300', '510330', '510360', '510510', '510680', '510760', '510880', '511010', '511030', '511180', '511260', '511360', '511520', '511660', '511700', '511850', '511900', '512000', '512040', '512100', '512170', '512330', '512480', '512510', '512670', '512690', '512710', '512760', '512820', '512890', '512930', '512980', '513010', '513050', '513070', '513090', '513110', '513130', '513180', '513260', '513290', '513310', '513360', '513500', '513530', '513580', '513660', '513700', '513800', '513880', '513980', '515030', '515060', '515080', '159929', '159996', '512200', '512800', '513220', '515310', '515900', '515120', '515170', '515210', '515230', '515290', '515380', '515400', '515700', '515770', '515800', '515850', '515950', '516010', '516090', '516150', '516220', '516310', '516770', '516820', '516910', '516970', '517180', '518800', '518880']
     train_data_files = [fdata_dir + "/{}.qfq.kdj.parquet".format(code) for code in train_code_list]  
 
-    arrs,  amounts,  signal_chooses, data_list = get_train_data(train_data_files, amount=amount, reg=reg, reg_type=reg_type, k_type=k_type, k_range=k_range, amount_type=amount_type)
-    pip_miner = train(n_pips=n_pips, lookback=lookback, hold_period=hold_period, arrs=arrs, amounts=amounts, signal_chooses=signal_chooses)
-    file_path = os.path.join(fdata_dir, "train", "_".join([amount, reg, reg_type, k_type, str(n_pips), str(lookback), str(hold_period), str(k_range), str(amount_type)]))
+    print("get data")
+    arrs,  amounts,  signal_chooses, data_list = get_train_data(train_data_files, amount=amount, reg=reg, reg_type=reg_type, k_type=k_type)
+    print("train")
+    pip_miner = train(n_pips=n_pips, lookback=lookback, hold_period=hold_period, arrs=arrs, amounts=amounts, signal_chooses=signal_chooses, k_range=k_range, amount_type=amount_type)
+    print("save stat")
+    file_path = os.path.join(fdata_dir, "train", "_".join([amount, reg, reg_type, k_type, str(n_pips), str(lookback), str(hold_period), str(k_range), str(amount_type), str(version)]))
     
     # 不需要保存
     pip_miner._unique_pip_patterns = []
@@ -123,7 +126,7 @@ def run(amount="amount_normalize20_rolling_96_mean", reg="close480_close2880", r
 
     # data_choose = data[['open', 'close', 'high', 'low', 'vol', 'amount', 'datetime', 'code','date', 'amount_normalize', 'K', 'D', 'J', "close_rolling_480_std", "amount_normalize_rolling_6_mean", "amount_diff_rolling_24_std"]]
 
-def test(amount="amount_normalize20_rolling_96_mean", reg="close480_close2880", reg_type="all", k_type="K18", n_pips=7, lookback=960, hold_period=12, target_close="target_close5", k_range=300, amount_type="all"):
+def test(amount="amount_normalize20_rolling_96_mean", reg="close480_close2880", reg_type="all", k_type="K18", n_pips=7, lookback=960, hold_period=12, target_close="target_close5", k_range=300, amount_type="all", version="1"):
     # data, add_feature = add_corr_feature(data, rolls=[24, 96, 480], column="close", column2="amount_normalize")
     fdata_dir = os.environ.get('FDATA', '/liubinxu/liubinxu/finance/learning/data/')
     # train_code_list = ['159905', '159003', '159601', '159606', '159610', '159612', '159619', '159628', '159632', '159636', '159677', '159741', '159814', '159881', '159647', '159650', '159667', '159679', '159681', '159688', '159708', '159718', '159736', '159742', '159747', '159755', '159776', '159781', '159790', '159796', '159805', '159813', '159820', '159828', '159831', '159839', '159841', '159843', '159850', '159852', '159864', '159866', '159869', '159875', '159887', '159892', '159902', '159907', '159915', '159920', '159925', '159930', '159937', '159939', '159941', '159949', '159968', '159972', '159980', '159982', '159992', '159994', '159997', '510050', '510150', '510230', '510310', '510350', '510500', '510580', '510710', '510800', '510900', '511020', '511060', '511220', '511270', '511380', '511620', '511690', '511810', '511880', '511990', '512010', '512070', '512120', '512290', '512400', '512500', '512660', '512680', '512700', '512720', '512810', '512880', '512900', '512950', '513000', '513020', '513060', '513080', '513100', '513120', '513160', '513200', '513280', '513300', '513330', '513380', '513520', '513550', '513600', '513690', '513770', '513860', '513900', '515000', '515050', '515070', '515100', '159952', '510210', '512560', '513030', '513890', '515650', '516640', '515130', '515180', '515220', '515250', '515330', '515390', '515450', '515710', '515790', '515810', '515880', '515980', '516020', '516110', '516160', '516300', '516510', '516780', '516880', '516950', '517090', '518680', '518850']
@@ -132,7 +135,7 @@ def test(amount="amount_normalize20_rolling_96_mean", reg="close480_close2880", 
     # test_data_files = test_data_files[:3]
     arrs,  amounts,  signal_chooses, data_list = get_train_data(test_data_files, amount=amount, reg=reg, reg_type=reg_type, k_type=k_type)
     # pip_miner = train(n_pips=n_pips, lookback=lookback, hold_period=hold_period, arrs=arrs, amounts=amounts, signal_chooses=signal_chooses)
-    file_path = os.path.join(fdata_dir, "train", "_".join([amount, reg, reg_type, k_type, str(n_pips), str(lookback), str(hold_period), str(k_range), str(amount_type)]))
+    file_path = os.path.join(fdata_dir, "train", "_".join([amount, reg, reg_type, k_type, str(n_pips), str(lookback), str(hold_period), str(k_range), str(amount_type), str(version)]))
     pip_miner = pip_miner_load(file_path)
     pip_miner.signal_choose = signal_chooses
     # print(len(pip_miner.signal_chooses[0]))
@@ -140,7 +143,7 @@ def test(amount="amount_normalize20_rolling_96_mean", reg="close480_close2880", 
     pip_miner_stat(pip_miner, test_data_files, data_list, target_close=target_close, stat_file=file_path + "_" + target_close + "_test", hold_period=hold_period)
 
 
-def train_stat(amount="amount_normalize20_rolling_96_mean", reg="close480_close2880", reg_type="all", k_type="K18", n_pips=7, lookback=960, hold_period=12, target_close="target_close5", k_range=300, amount_type="all"):
+def train_stat(amount="amount_normalize20_rolling_96_mean", reg="close480_close2880", reg_type="all", k_type="K18", n_pips=7, lookback=960, hold_period=12, target_close="target_close5", k_range=300, amount_type="all", version="1"):
     # data, add_feature = add_corr_feature(data, rolls=[24, 96, 480], column="close", column2="amount_normalize")
     fdata_dir = os.environ.get('FDATA', '/liubinxu/liubinxu/finance/learning/data/')
     train_code_list = ['159905', '159003', '159601', '159606', '159610', '159612', '159619', '159628', '159632', '159636', '159677', '159741', '159814', '159881', '159647', '159650', '159667', '159679', '159681', '159688', '159708', '159718', '159736', '159742', '159747', '159755', '159776', '159781', '159790', '159796', '159805', '159813', '159820', '159828', '159831', '159839', '159841', '159843', '159850', '159852', '159864', '159866', '159869', '159875', '159887', '159892', '159902', '159907', '159915', '159920', '159925', '159930', '159937', '159939', '159941', '159949', '159968', '159972', '159980', '159982', '159992', '159994', '159997', '510050', '510150', '510230', '510310', '510350', '510500', '510580', '510710', '510800', '510900', '511020', '511060', '511220', '511270', '511380', '511620', '511690', '511810', '511880', '511990', '512010', '512070', '512120', '512290', '512400', '512500', '512660', '512680', '512700', '512720', '512810', '512880', '512900', '512950', '513000', '513020', '513060', '513080', '513100', '513120', '513160', '513200', '513280', '513300', '513330', '513380', '513520', '513550', '513600', '513690', '513770', '513860', '513900', '515000', '515050', '515070', '515100', '159952', '510210', '512560', '513030', '513890', '515650', '516640', '515130', '515180', '515220', '515250', '515330', '515390', '515450', '515710', '515790', '515810', '515880', '515980', '516020', '516110', '516160', '516300', '516510', '516780', '516880', '516950', '517090', '518680', '518850']
@@ -148,7 +151,7 @@ def train_stat(amount="amount_normalize20_rolling_96_mean", reg="close480_close2
     train_data_files = [fdata_dir + "/{}.qfq.kdj.parquet".format(code) for code in train_code_list]  
 
     arrs,  amounts,  signal_chooses, data_list = get_train_data(train_data_files, amount=amount, reg=reg, reg_type=reg_type, k_type=k_type)
-    file_path = os.path.join(fdata_dir, "train", "_".join([amount, reg, reg_type, k_type, str(n_pips), str(lookback), str(hold_period), str(k_range), str(amount_type)]))
+    file_path = os.path.join(fdata_dir, "train", "_".join([amount, reg, reg_type, k_type, str(n_pips), str(lookback), str(hold_period), str(k_range), str(amount_type), str(version)]))
     pip_miner = pip_miner_load(file_path)
     pip_miner_stat(pip_miner, train_data_files, data_list, target_close=target_close, stat_file=file_path + "_" + target_close, hold_period=hold_period)
 
@@ -169,7 +172,7 @@ if __name__ == "__main__":
     # run(amount="amount_normalize20_rolling_96_mean", reg="close480_close2880", reg_type="all", k_type="K18", n_pips=7, lookback=960, hold_period=12, target_close="target_close5")
     import time
     import random
-    sec = random.randint(0, 300)
+    sec = random.randint(0, 30)
     time.sleep(sec) 
     if sys.argv[-1] == "train":
         run(amount=sys.argv[1], 
@@ -182,6 +185,7 @@ if __name__ == "__main__":
             target_close=sys.argv[8],
             k_range=int(sys.argv[9]),
             amount_type=sys.argv[10],
+            version=sys.argv[11],
             )
     if sys.argv[-1] == "test":
         test(amount=sys.argv[1], 
@@ -194,6 +198,7 @@ if __name__ == "__main__":
             target_close=sys.argv[8],
             k_range=int(sys.argv[9]),
             amount_type=sys.argv[10],
+            version=sys.argv[11],
             )
         
     if sys.argv[-1] == "train_stat":
@@ -207,6 +212,7 @@ if __name__ == "__main__":
             target_close=sys.argv[8],
             k_range=int(sys.argv[9]),
             amount_type=sys.argv[10],
+            version=sys.argv[11],
             )
 
 
