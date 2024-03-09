@@ -329,15 +329,18 @@ class PIPPatternMiner:
 
         a1, a2 = bi_kMeans(np.mat(self._unique_pip_patterns), k=amount_clusters)
         distances = []
+        pip_clusters = []
         for n in range(0,a1):
             mean = a1[n]
             indices = np.where([a2[:, 0] == n])[1]
             choose_mat = np.mat(self._unique_pip_patterns)[indices, ]
-            dis = [np.linalg.norm(np.array(a1[1]) - np.array(b)) for b in choose_mat]
+            dis = [np.linalg.norm(np.array(mean) - np.array(b)) for b in choose_mat]
             distances.append([
                 np.mean(dis),
-                np.std(dis)
+                np.std(dis),
+                len(choose_mat)
             ])
+            pip_clusters.append(indices)
 
 
         # Extract clustering results: clusters and their centers
