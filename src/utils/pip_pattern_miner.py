@@ -1,3 +1,4 @@
+from turtle import distance
 import pandas as pd
 import numpy as np
 import math
@@ -7,6 +8,7 @@ from pyclustering.cluster.silhouette import silhouette_ksearch_type, silhouette_
 from pyclustering.cluster.kmeans import kmeans
 from pyclustering.cluster.center_initializer import kmeans_plusplus_initializer
 from .perceptually_important import find_pips
+from .kmeans import bi_kMeans
 
 
 class PIPPatternMiner:
@@ -40,7 +42,7 @@ class PIPPatternMiner:
         self.signal_choose = signal_choose
         self.amount_type = "all"
         self.k_range = 300
-        self.cluster_method = "kmeans"
+        self.cluster_method = "bi-kmeans"
 
     def get_fit_martin(self):
         return self._fit_martin
@@ -324,13 +326,24 @@ class PIPPatternMiner:
 
     def _bikmeans_cluster_patterns(self, amount_clusters):
         # Cluster Patterns
-        initial_centers = kmeans_plusplus_initializer(self._unique_pip_patterns, amount_clusters).initialize()
-        kmeans_instance = kmeans(self._unique_pip_patterns, initial_centers)
-        kmeans_instance.process()
+
+        a1, a2 = bi_kMeans(np.mat(self._unique_pip_patterns), k=amount_clusters)
+        distances = []
+        for n in range(0,a1):
+            mean = a1[n]
+            indices = np.where([a2[:, 0] == n])[1]
+            choose_mat = np.mat(self._unique_pip_patterns)[indices, ]
+            dis = [np.linalg.norm(np.array(a1[1]) - np.array(b)) for b in choose_mat]
+            distances.append([
+                np.mean(dis),
+                np.std(dis)
+            ])
+
 
         # Extract clustering results: clusters and their centers
-        self._pip_clusters = kmeans_instance.get_clusters()
-        self._cluster_centers = kmeans_instance.get_centers()
+        self._pip_clusters = [n for n in range(0,a1)]
+        self._cluster_centers = a1
+        self._cluster_center_distance = distances
 
     def _get_martin(self, rets: np.array):
         rsum = np.sum(rets)
