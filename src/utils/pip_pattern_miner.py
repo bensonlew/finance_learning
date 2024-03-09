@@ -280,8 +280,10 @@ class PIPPatternMiner:
             
             if not same:
                 # Z-Score normalize pattern
+
                 pips_y = list((np.array(pips_y) - np.mean(pips_y)) / np.std(pips_y))
                 amount_y = list((np.array(amount_y) - np.mean(amount_y)) / np.std(amount_y))
+                amount_choose = []
                 if self.amount_type == "all":
                     amount_choose = amount_y
                 elif self.amount_type == "half":
@@ -302,14 +304,18 @@ class PIPPatternMiner:
                 corr_list = []
                 for cluster_center in self._cluster_centers:
                     corr_list.append(
-                        np.corrcoef(pips_y + amount_choose, cluster_center)[0][1]
+                        np.linalg.norm(np.array(pips_y + amount_choose) - np.array(cluster_center))
+                        # np.corrcoef(pips_y + amount_choose, cluster_center)[0][1]
                     )
+
                 corr_list = np.array(corr_list)
                 cluster_num = corr_list.argmin()
-                # print(len(self._cluster_centers), cluster_num)
-                self._unique_pip_patterns.append(cluster_num)
-                self._unique_pip_indices.append(i)
-                self._unique_pip_datasource.append(n)
+                distance = min(corr_list)
+                if distance < self._cluster_center_distance[0] + 2 * self._cluster_center_distance[1]:
+                    # print(len(self._cluster_centers), cluster_num)
+                    self._unique_pip_patterns.append(cluster_num)
+                    self._unique_pip_indices.append(i)
+                    self._unique_pip_datasource.append(n)
 
             last_pips_x = pips_x
 
