@@ -344,7 +344,7 @@ class PIPPatternMiner:
 
 
         # Extract clustering results: clusters and their centers
-        self._pip_clusters = [n for n in range(0,a1)]
+        self._pip_clusters = pip_clusters
         self._cluster_centers = a1
         self._cluster_center_distance = distances
 
