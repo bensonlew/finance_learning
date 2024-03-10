@@ -120,6 +120,8 @@ def run(amount="amount_normalize20_rolling_96_mean", reg="close480_close2880", r
     pip_miner._unique_pip_datasource=[]
     pip_miner._cluster_signals = []
 
+    # 删除后不能用stat
+    pip_miner._cluster_signals_dict = []
     
     pip_miner_save(pip_miner, file_path)
     pip_miner_stat(pip_miner, train_data_files, data_list, target_close=target_close, stat_file=file_path + "_" + target_close, hold_period=hold_period)
