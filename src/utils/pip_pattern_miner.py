@@ -311,7 +311,7 @@ class PIPPatternMiner:
                 corr_list = np.array(corr_list)
                 cluster_num = corr_list.argmin()
                 distance = min(corr_list)
-                if distance < self._cluster_center_distance[0] + 2 * self._cluster_center_distance[1]:
+                if distance < self._cluster_center_distance[cluster_num][0] + 2 * self._cluster_center_distance[cluster_num][1]:
                     # print(len(self._cluster_centers), cluster_num)
                     self._unique_pip_patterns.append(cluster_num)
                     self._unique_pip_indices.append(i)
