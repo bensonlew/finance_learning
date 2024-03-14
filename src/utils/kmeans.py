@@ -86,7 +86,7 @@ def k_Means(data_mat, k, dist = "dist_eucl", create_cent = "rand_cent"):
             centroid[j, :] = mean(per_data_set, axis = 0)
     return centroid, cluster_assment
 
-def bi_kMeans(data_mat, k, dist = "dist_eucl"):
+def bi_kMeans(data_mat, k, dist = "dist_eucl", retain_ks=[]):
     """
     @brief      kMeans algorithm
     @param      data_mat     The data matrix
@@ -94,8 +94,9 @@ def bi_kMeans(data_mat, k, dist = "dist_eucl"):
     @param      dist         The distance funtion
     @return     the cluster
     """
-    m = shape(data_mat)[0]
 
+    m = shape(data_mat)[0]
+    retain_dict = {}
     # 初始化点的簇
     cluster_assment = mat(zeros((m, 2)))  # 类别，距离
 
@@ -109,6 +110,8 @@ def bi_kMeans(data_mat, k, dist = "dist_eucl"):
         cluster_assment[j, 1] = eval(dist)(mat(centroid0), data_mat[j, :]) ** 2 
 
     while (len(cent_list) < k):
+        if len(cent_list) in retain_ks:
+            retain_dict[str(len(cent_list))] = [mat(cent_list), cluster_assment]
         lowest_sse = inf 
         for i in range(len(cent_list)):
             # 尝试在每一类簇中进行k=2的kmeans划分
@@ -132,7 +135,7 @@ def bi_kMeans(data_mat, k, dist = "dist_eucl"):
         cent_list[best_cent_tosplit] = best_new_cents[0, :].tolist()[0]
         cent_list.append(best_new_cents[1, :].tolist()[0])
         cluster_assment[nonzero(cluster_assment[:, 0].A == best_cent_tosplit)[0],:] = best_cluster_ass
-    return mat(cent_list), cluster_assment
+    return mat(cent_list), cluster_assment, retain_dict
 
 def plot_cluster(data_mat, cluster_assment, centroid):
     """
