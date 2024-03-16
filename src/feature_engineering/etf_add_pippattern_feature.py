@@ -1,16 +1,17 @@
 # coding:utf-8
 #  给etf数据添加feature
 
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-from src.utils.pip_pattern_miner import PIPPatternMiner
-import sys
-import os
 import glob
-from scipy.stats import mannwhitneyu
+import os
 import pickle
+import sys
 
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+from scipy.stats import mannwhitneyu
+
+from src.utils.pip_pattern_miner import PIPPatternMiner
 
 
 def get_train_data(train_files, amount="amount_normalize20_rolling_96_mean", reg="close480_close2880", reg_type="all", k_type="K18"):
@@ -43,7 +44,8 @@ def train(n_pips=7, lookback=960, hold_period=12, arrs=[], amounts=[], signal_ch
     pip_miner = PIPPatternMiner(n_pips=n_pips, lookback=lookback, hold_period=hold_period, signal_choose=signal_chooses)
     pip_miner.k_range = k_range
     pip_miner.amount_type = amount_type
-    pip_miner.train_multi(arrs, vol=amounts, n_reps=-1)
+    retain_ks = [k for k in range(1, k_range) if k%10 == 0]
+    pip_miner.train_multi(arrs, vol=amounts, n_reps=-1, retain_ks=retain_ks)
     return pip_miner
 
 def pip_miner_save(pip_miner, file_path):
@@ -98,6 +100,68 @@ def pip_miner_stat(pip_miner, data_files, data_list, target_close="target_close5
     df_stat["num_sum"] = df_stat["target_num"].cumsum()/hold_period
     df_stat["target_sum_sum"] = df_stat["target_sum"].cumsum()
     df_stat.to_csv(stat_file + ".stat.tsv", sep="\t", index=False)
+    return df_stat
+
+def pso_para_search():
+    '''
+    using pso find best params
+    '''
+    pass
+
+def loss_function(train_stat_df, test_stat_df, model_name =""):
+    data_dict = {}
+    stat = list()
+    def get_fun(data):
+        return (1+data["target_mean"]) ** (data["target_num"]/3)
+    def get_test_fun(data):
+        return (1+data["test_target_mean"]) ** (data["test_target_num"]/3)
+
+    data = train_stat_df
+    test_data = test_stat_df
+    
+    test_data_choose = test_data[["target_mean", "target_num", "clusters"]]
+    test_data_choose.rename(columns={"target_mean":"test_target_mean", "target_num":"test_target_num"}, inplace=True)
+    data = data.merge(test_data_choose, left_on="clusters", right_on="clusters")
+    #data = data[data["target_num"]> 100]
+    data = data[data["mannwhitneyu_p"] < 0.2]
+    data.fillna(0, inplace=True)
+    hold_period = 3 
+    data["test_target_sum"]  = data["test_target_mean"] * data["test_target_num"] /hold_period
+    data["test_target_sum_sum"] = data["test_target_sum"].cumsum()
+
+    record = {
+        "model": model_name,
+    }
+
+    for choose_pct in [2, 5 ,10, 20, 30, 50, 70, 90, 100]:
+        choose = data[data["num_sum"]< list(data["num_sum"])[-1]/100 * choose_pct]
+
+        day = choose["target_num"].sum()/3
+        choose["get_fun"] = choose.apply(get_fun, axis=1) 
+        all_get = choose["get_fun"].prod()
+        day_get = all_get ** (1/(day))
+
+        test_day = choose["test_target_num"].sum()/3
+        choose["test_get_fun"] = choose.apply(get_test_fun, axis=1) 
+        test_all_get = choose["test_get_fun"].prod()
+        test_day_get = test_all_get ** (1/(test_day))
+        record.update({
+            "day" + str(choose_pct):day,
+            "all_get" + str(choose_pct):all_get,
+            "day_get" + str(choose_pct):day_get,
+            "test_day" + str(choose_pct):test_day,
+            "test_all_get" + str(choose_pct):test_all_get,
+            "test_day_get" + str(choose_pct):test_day_get 
+        })
+    
+
+    sum_over_present = (record["test_day_get5"] - record["test_day_get100"]) * 0.5 + \
+                    (record["test_day_get10"] - record["test_day_get100"]) + \
+                    (record["test_day_get20"] - record["test_day_get100"]) + \
+                    (record["test_day_get30"] - record["test_day_get100"])
+
+    return sum_over_present
+
 
 
 def run(amount="amount_normalize20_rolling_96_mean", reg="close480_close2880", reg_type="all", k_type="K18", n_pips=7, lookback=960, hold_period=12, target_close="target_close5", k_range=300, amount_type="all", version="1"):
@@ -122,11 +186,12 @@ def run(amount="amount_normalize20_rolling_96_mean", reg="close480_close2880", r
     pip_miner._unique_pip_datasource=[]
     pip_miner._cluster_signals = []
 
+
     # 删除后不能用stat
     pip_miner._cluster_signals_dict = []
     
     pip_miner_save(pip_miner, file_path)
-    pip_miner_stat(pip_miner, train_data_files, data_list, target_close=target_close, stat_file=file_path + "_" + target_close, hold_period=hold_period)
+    train_stat_df = pip_miner_stat(pip_miner, train_data_files, data_list, target_close=target_close, stat_file=file_path + "_" + target_close, hold_period=hold_period)
 
     # data_choose = data[['open', 'close', 'high', 'low', 'vol', 'amount', 'datetime', 'code','date', 'amount_normalize', 'K', 'D', 'J', "close_rolling_480_std", "amount_normalize_rolling_6_mean", "amount_diff_rolling_24_std"]]
 
@@ -144,7 +209,7 @@ def test(amount="amount_normalize20_rolling_96_mean", reg="close480_close2880", 
     pip_miner.signal_choose = signal_chooses
     # print(len(pip_miner.signal_chooses[0]))
     pip_miner.test_multi(arr=arrs, vol=amounts)
-    pip_miner_stat(pip_miner, test_data_files, data_list, target_close=target_close, stat_file=file_path + "_" + target_close + "_test", hold_period=hold_period)
+    test_stat_df = pip_miner_stat(pip_miner, test_data_files, data_list, target_close=target_close, stat_file=file_path + "_" + target_close + "_test", hold_period=hold_period)
 
 
 def train_stat(amount="amount_normalize20_rolling_96_mean", reg="close480_close2880", reg_type="all", k_type="K18", n_pips=7, lookback=960, hold_period=12, target_close="target_close5", k_range=300, amount_type="all", version="1"):
@@ -176,8 +241,8 @@ if __name__ == "__main__":
     target_close = ["target_close1", "target_close2", "target_close5", "target_close10"]
 
     # run(amount="amount_normalize20_rolling_96_mean", reg="close480_close2880", reg_type="all", k_type="K18", n_pips=7, lookback=960, hold_period=12, target_close="target_close5")
-    import time
     import random
+    import time
     sec = random.randint(0, 30)
     time.sleep(sec) 
     if sys.argv[-1] == "train":
@@ -213,6 +278,20 @@ if __name__ == "__main__":
             reg_type=sys.argv[3], 
             k_type=sys.argv[4], 
             n_pips=int(sys.argv[5]), 
+            lookk=int(sys.argv[6]), 
+            hold_period=int(sys.argv[7]), 
+            target_close=sys.argv[8],
+            k_range=int(sys.argv[9]),
+            amount_type=sys.argv[10],
+            version=sys.argv[11],
+            )
+
+    if sys.argv[-1] == "train_test":
+        train_test(amount=sys.argv[1], 
+            reg=sys.argv[2], 
+            reg_type=sys.argv[3], 
+            k_type=sys.argv[4], 
+            n_pips=int(sys.argv[5]), 
             lookback=int(sys.argv[6]), 
             hold_period=int(sys.argv[7]), 
             target_close=sys.argv[8],
@@ -220,6 +299,7 @@ if __name__ == "__main__":
             amount_type=sys.argv[10],
             version=sys.argv[11],
             )
+
 
 
 

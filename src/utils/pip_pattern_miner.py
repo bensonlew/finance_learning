@@ -167,7 +167,7 @@ class PIPPatternMiner:
         
         
 
-    def train_multi(self, arr: list, vol:list, n_reps=-1, returns=None):
+    def train_multi(self, arr: list, vol:list, n_reps=-1, returns=None, retain_ks=[]):
         # 多组数据训练
         self.data_list = []
         n = 0
@@ -186,7 +186,7 @@ class PIPPatternMiner:
             amount = search_instance.get_amount()
             self._kmeans_cluster_patterns(amount)
         elif self.cluster_method == "bi-kmeans":
-            self._bikmeans_cluster_patterns(self.k_range)
+            self._bikmeans_cluster_patterns(self.k_range, retain_ks=retain_ks)
 
         self._get_cluster_signals_multi()
         # self._assign_clusters()
@@ -330,10 +330,35 @@ class PIPPatternMiner:
         self._pip_clusters = kmeans_instance.get_clusters()
         self._cluster_centers = kmeans_instance.get_centers()
 
-    def _bikmeans_cluster_patterns(self, amount_clusters):
+    def _bikmeans_cluster_patterns(self, amount_clusters, retain_ks=[]):
         # Cluster Patterns
 
-        a1, a2 = bi_kMeans(np.mat(self._unique_pip_patterns), k=amount_clusters)
+        a1, a2, retain_dict = bi_kMeans(np.mat(self._unique_pip_patterns), k=amount_clusters, retain_ks=retain_ks)
+        distances = []
+        pip_clusters = []
+        for n in range(0,len(a1)):
+            mean = a1[n]
+            indices = np.where([a2[:, 0] == n])[1]
+            choose_mat = np.mat(self._unique_pip_patterns)[indices, ]
+            dis = [np.linalg.norm(np.array(mean) - np.array(b)) for b in choose_mat]
+            distances.append([
+                np.mean(dis),
+                np.std(dis),
+                len(choose_mat)
+            ])
+            pip_clusters.append(indices)
+
+
+        # Extract clustering results: clusters and their centers
+        self._pip_clusters = pip_clusters
+        self._cluster_centers = a1
+        self._cluster_center_distance = distances
+        self._retain_dict = retain_dict
+
+    def _bikmeans_cluster_parent_patterns(self, k):
+        # Cluster Patterns
+
+        a1, a2 = self._retain_dict[k]
         distances = []
         pip_clusters = []
         for n in range(0,len(a1)):
