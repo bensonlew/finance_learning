@@ -155,10 +155,10 @@ def loss_function(train_stat_df, test_stat_df, model_name =""):
         })
     
 
-    sum_over_present = (record["test_day_get5"] - record["test_day_get100"]) * 0.5 + \
-                    (record["test_day_get10"] - record["test_day_get100"]) + \
-                    (record["test_day_get20"] - record["test_day_get100"]) + \
-                    (record["test_day_get30"] - record["test_day_get100"])
+    sum_over_present = (float(record["test_day_get5"]) - float(record["test_day_get100"])) * 0.5 + \
+                        (float(record["test_day_get10"]) - float(record["test_day_get100"])) + \
+                        (float(record["test_day_get20"]) - float(record["test_day_get100"])) + \
+                        (float(record["test_day_get30"]) - float(record["test_day_get100"]))
 
     return sum_over_present
 
@@ -278,7 +278,7 @@ if __name__ == "__main__":
             reg_type=sys.argv[3], 
             k_type=sys.argv[4], 
             n_pips=int(sys.argv[5]), 
-            lookk=int(sys.argv[6]), 
+            lookback=int(sys.argv[6]), 
             hold_period=int(sys.argv[7]), 
             target_close=sys.argv[8],
             k_range=int(sys.argv[9]),

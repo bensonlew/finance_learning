@@ -13,7 +13,7 @@ from .kmeans import bi_kMeans
 
 class PIPPatternMiner:
 
-    def __init__(self, n_pips: int, lookback: int, hold_period: int, signal_choose: float):
+    def __init__(self, n_pips: int, lookback: int, hold_period: int, signal_choose: list):
         self._n_pips = n_pips
         self._lookback = lookback
         self._hold_period = hold_period
@@ -191,9 +191,10 @@ class PIPPatternMiner:
         self._get_cluster_signals_multi()
         # self._assign_clusters()
         # self._fit_martin = self._get_total_performance()
-        
 
-
+    def train_multi_parent_cluster(self, k=10):
+        self._bikmeans_cluster_parent_patterns(k=k)
+        self._get_cluster_signals_multi()   
 
 
     def _find_unique_patterns(self, n=None):
