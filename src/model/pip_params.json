@@ -1,0 +1,19 @@
+{
+    "train": {
+        "amount": "amount_normalize20_rolling_96_exp_mean",
+        "reg": "close480_close2880",
+        "reg_type": "down",
+        "k_type": "K72",
+        "n_pips": 9,
+        "lookback": 240,
+        "hold_period": 3,
+        "k_range": 250,
+        "amount_type": "no"
+    },
+    "test": {
+        "k_parent": null
+    },
+    "evaluate": {
+        "target_close": "target_close1"
+    }
+}
