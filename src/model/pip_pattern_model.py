@@ -251,7 +251,11 @@ class PipPatternModel:
     def load_train_stat_df(self):
         target_close=self.model_params["evaluate"]["target_close"]
         stat_file=self.file_path_abr  + self.file_path_test_abr + "_" + target_close
-        return pd.read_csv(stat_file + ".stat.tsv", sep="\t")
+        if os.path.exists(stat_file):
+            return pd.read_csv(stat_file + ".stat.tsv", sep="\t")
+        else:
+            train_stat_df = self.pip_miner_stat(self.train_data_files, self.train_data_list)
+            return train_stat_df
 
 
     def evaluate_model(self, train_stat_df, test_stat_df):

@@ -8,6 +8,7 @@
 import codecs
 from numpy import *
 import matplotlib.pyplot as plt
+import copy
 
 def load_data(path):
     """
@@ -110,8 +111,10 @@ def bi_kMeans(data_mat, k, dist = "dist_eucl", retain_ks=[]):
         cluster_assment[j, 1] = eval(dist)(mat(centroid0), data_mat[j, :]) ** 2 
 
     while (len(cent_list) < k):
-        if len(cent_list) in retain_ks:
-            retain_dict[str(len(cent_list))] = [mat(cent_list), cluster_assment]
+        if str(len(cent_list)) in retain_ks:
+            tmp_cent_list =  copy.deepcopy(cent_list)
+            tmp_cluster_assment = copy.deepcopy(cluster_assment)
+            retain_dict[str(len(cent_list))] = [mat(tmp_cent_list), tmp_cluster_assment]
         lowest_sse = inf 
         for i in range(len(cent_list)):
             # 尝试在每一类簇中进行k=2的kmeans划分
@@ -120,15 +123,15 @@ def bi_kMeans(data_mat, k, dist = "dist_eucl", retain_ks=[]):
             # 计算分类之后的SSE值
             sse_split = sum(split_cluster_ass[:, 1])
             sse_nonsplit = sum(cluster_assment[nonzero(cluster_assment[:, 0].A != i)[0], 1])
-            print("sse_split, sse_nonsplit", sse_split, sse_nonsplit)
+            # print("sse_split, sse_nonsplit", sse_split, sse_nonsplit)
             # 记录最好的划分位置
             if sse_split + sse_nonsplit < lowest_sse:
                 best_cent_tosplit = i
                 best_new_cents = centroid_mat
                 best_cluster_ass = split_cluster_ass.copy()
                 lowest_sse = sse_split + sse_nonsplit
-        print( 'the bestCentToSplit is: ', best_cent_tosplit)
-        print ('the len of bestClustAss is: ', len(best_cluster_ass))
+        # print( 'the bestCentToSplit is: ', best_cent_tosplit)
+        # print ('the len of bestClustAss is: ', len(best_cluster_ass))
         # 更新簇的分配结果
         best_cluster_ass[nonzero(best_cluster_ass[:, 0].A == 1)[0], 0] = len(cent_list)
         best_cluster_ass[nonzero(best_cluster_ass[:, 0].A == 0)[0], 0] = best_cent_tosplit

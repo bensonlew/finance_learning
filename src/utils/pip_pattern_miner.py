@@ -359,7 +359,7 @@ class PIPPatternMiner:
     def _bikmeans_cluster_parent_patterns(self, k):
         # Cluster Patterns
 
-        a1, a2 = self._retain_dict[k]
+        a1, a2 = self._retain_dict[str(k)]
         distances = []
         pip_clusters = []
         for n in range(0,len(a1)):
