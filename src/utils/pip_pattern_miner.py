@@ -49,6 +49,9 @@ class PIPPatternMiner:
 
     def get_permutation_martins(self):
         return self._perm_martins
+    
+    def detail_cluster(self, cluster):
+        pass
 
     def plot_cluster_examples(self, candle_data: pd.DataFrame, cluster_i: int, grid_size: int = 5):
         plt.style.use('dark_background')
@@ -349,7 +352,7 @@ class PIPPatternMiner:
             ])
             pip_clusters.append(indices)
 
-
+        print(a1[:2])
         # Extract clustering results: clusters and their centers
         self._pip_clusters = pip_clusters
         self._cluster_centers = a1

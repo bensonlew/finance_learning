@@ -256,6 +256,20 @@ class PipPatternModel:
         else:
             train_stat_df = self.pip_miner_stat(self.train_data_files, self.train_data_list)
             return train_stat_df
+        
+    def detail_model(self, cluster_list=[]):
+        if self.load_model():
+            pass
+        else:
+            train_stat_df = self.train_run()
+        if self.model_params["test"]["k_parent"]:
+            self.pip_miner.train_multi_parent_cluster(self.model_params["test"]["k_parent"])
+            train_stat_df = self.pip_miner_stat(self.train_data_files, self.train_data_list)
+        else:
+            train_stat_df = self.load_train_stat_df()
+
+        for cluster in cluster_list:
+            self.pip_miner.detail_cluster(cluster)
 
 
     def evaluate_model(self, train_stat_df, test_stat_df):
@@ -272,13 +286,15 @@ class PipPatternModel:
         test_data_choose = test_data[["target_mean", "target_num", "clusters"]]
         test_data_choose.rename(columns={"target_mean":"test_target_mean", "target_num":"test_target_num"}, inplace=True)
         data = data.merge(test_data_choose, left_on="clusters", right_on="clusters")
-        #data = data[data["target_num"]> 100]
-        data = data[data["mannwhitneyu_p"] < 0.2]
+        # data = data[data["target_num"]> 100]
+        # data = data[data["mannwhitneyu_p"] < 0.2]
         if len(data) == 0:
             return 0.0
         data.fillna(0, inplace=True)
         hold_period = 3 
+        data["test_target_num2"]  = data["test_target_num"] /hold_period
         data["test_target_sum"]  = data["test_target_mean"] * data["test_target_num"] /hold_period
+        data["test_target_num_sum"] = data["test_target_num2"].cumsum()
         data["test_target_sum_sum"] = data["test_target_sum"].cumsum()
 
 
@@ -287,7 +303,7 @@ class PipPatternModel:
         }
 
         for choose_pct in [2, 5 ,10, 20, 30, 50, 70, 90, 100]:
-            choose = data[data["num_sum"]< list(data["num_sum"])[-1]/100 * choose_pct]
+            choose = data[data["test_target_num_sum"]< list(data["test_target_num_sum"])[-1]/100 * choose_pct]
             if len(choose) == 0:
                 return 0.0
             day = choose["target_num"].sum()/3
@@ -362,3 +378,6 @@ if __name__ == "__main__":
         model.test_run()
     elif fun == "train_test":
         model.train_and_test_run()
+    elif fun == "detail":
+        list = sys.argv[4].split(",")
+        model.detail_model()
