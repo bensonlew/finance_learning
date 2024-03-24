@@ -269,7 +269,7 @@ class PipPatternModel:
             train_stat_df = self.load_train_stat_df()
 
         for cluster in cluster_list:
-            self.pip_miner.detail_cluster(cluster)
+            self.pip_miner.detail_cluster(cluster, self.train_data_list, file=self.file_path_abr + self.file_path_test_abr + cluster)
 
 
     def evaluate_model(self, train_stat_df, test_stat_df):

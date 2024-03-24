@@ -9,7 +9,7 @@ from pyclustering.cluster.kmeans import kmeans
 from pyclustering.cluster.center_initializer import kmeans_plusplus_initializer
 from .perceptually_important import find_pips
 from .kmeans import bi_kMeans
-
+import os
 
 class PIPPatternMiner:
 
@@ -22,6 +22,7 @@ class PIPPatternMiner:
         self._unique_pip_indices = []
         self._unique_pip_datasource=[]
         self._cluster_centers = []
+
         self._pip_clusters = []
 
         self._cluster_signals = []
@@ -50,8 +51,29 @@ class PIPPatternMiner:
     def get_permutation_martins(self):
         return self._perm_martins
     
-    def detail_cluster(self, cluster):
-        pass
+    def detail_cluster(self, cluster=0, data_list=[], file="test"):
+        '''
+        提取分类的详细信息
+        '''
+        indices = self._pip_clusters[int(cluster)]
+        choose_mat = np.mat(self._unique_pip_patterns)[indices, ]
+
+        # 使用matplotlib 对choose_mat 做折线图 并保存 到file
+        fig, axs = plt.subplots(1, 1)
+        for i in range(choose_mat.shape[0]):
+            axs.plot(choose_mat[i, :])
+
+        plt.savefig(file + ".png")
+
+
+        merge_df = pd.DataFrame()
+        for n, data in enumerate(data_list):
+            # index_code = os.path.basename(data_list[n])
+            sig = self._cluster_signals_dict[cluster][n]
+            cluster_df = data[sig == 1]
+            merge_df = pd.concat([merge_df, cluster_df])
+        merge_df.to_csv(file + ".tsv", sep="\t") 
+    
 
     def plot_cluster_examples(self, candle_data: pd.DataFrame, cluster_i: int, grid_size: int = 5):
         plt.style.use('dark_background')
@@ -264,7 +286,7 @@ class PIPPatternMiner:
         last_pips_x = [0] * self._n_pips
         # print(n, len(self._data), len(self.signal_choose[n]))
         for i in range(self._lookback - 1, len(self._data) - self._hold_period):
-            if self.signal_choose[n][i] == False:
+            if self.signal_choose[n][i] == False: # type: ignore
                 # 筛选部分时间点
                 continue
             start_i = i - self._lookback + 1
@@ -405,7 +427,7 @@ class PIPPatternMiner:
         self._cluster_signals.clear()
 
         for clust in self._pip_clusters: # Loop through each cluster
-            signal = np.zeros(len(self._data))
+            signal = np.zeros(len(self._data)) # type: ignore
             for mem in clust: # Loop through each member in cluster
                 arr_i = self._unique_pip_indices[mem]
                 data_source = self._unique_pip_datasource[mem]
@@ -418,7 +440,7 @@ class PIPPatternMiner:
     def _get_cluster_signals_multi(self):
         self._cluster_signals_dict = dict()
 
-        for n, clust in enumerate(self._pip_clusters): # Loop through each cluster
+        for n, clust in enumerate(self._pip_clusters): # Loop through each cluster # type: ignore
             self._cluster_signals_dict[n] = []
             for adata in self.data_list:
                 signal = np.zeros(len(adata))
