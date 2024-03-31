@@ -61,7 +61,9 @@ class PIPPatternMiner:
         # 使用matplotlib 对choose_mat 做折线图 并保存 到file
         fig, axs = plt.subplots(1, 1)
         for i in range(choose_mat.shape[0]):
-            axs.plot(choose_mat[i, :])
+            choose_line = np.array(choose_mat[i])[0]
+            axs.plot(range(len(choose_line)), choose_line)
+        axs.set_title("{}".format(cluster))
 
         plt.savefig(file + ".png")
 
@@ -69,7 +71,7 @@ class PIPPatternMiner:
         merge_df = pd.DataFrame()
         for n, data in enumerate(data_list):
             # index_code = os.path.basename(data_list[n])
-            sig = self._cluster_signals_dict[cluster][n]
+            sig = self._cluster_signals_dict[int(cluster)][n]
             cluster_df = data[sig == 1]
             merge_df = pd.concat([merge_df, cluster_df])
         merge_df.to_csv(file + ".tsv", sep="\t") 
