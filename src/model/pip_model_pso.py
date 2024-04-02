@@ -1,6 +1,7 @@
 # 使用pso计算PipPatternModel的最优参数
 import numpy as np
 from pyswarm import pso
+from sko.PSO import PSO
 import json
 import copy
 from .pip_pattern_model import PipPatternModel
@@ -85,8 +86,10 @@ num_particles = 30
 num_iterations = 100
 
 # Run PSO optimization
-best_params, best_value = pso(objective_function, lower_bounds, upper_bounds, swarmsize=num_particles, maxiter=num_iterations)
-
+# best_params, best_value = pso(objective_function, lower_bounds, upper_bounds, swarmsize=num_particles, maxiter=num_iterations)
+pso = PSO(func=objective_function, dim=len(params_ranges), pop=50, max_iter=800, lb=lower_bounds, ub=upper_bounds)
+pso.set_run_mode('multiprocessing')
+best_params, best_performance = pso.run()
 # Print the best parameters and objective value
-print("Best Parameters:", best_params)
+print("Best Parameters:"q, best_params)
 print("Best Objective Value:", best_value)
