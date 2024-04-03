@@ -252,6 +252,7 @@ class PIPPatternMiner:
             
             if not same:
                 # Z-Score normalize pattern
+                # pips_y = np.log(pips_y)
                 pips_y = list((np.array(pips_y) - np.mean(pips_y)) / np.std(pips_y))
                 amount_y = list((np.array(amount_y) - np.mean(amount_y)) / np.std(amount_y))
 
@@ -308,7 +309,7 @@ class PIPPatternMiner:
             
             if not same:
                 # Z-Score normalize pattern
-
+                # pips_y = np.log(pips_y)
                 pips_y = list((np.array(pips_y) - np.mean(pips_y)) / np.std(pips_y))
                 amount_y = list((np.array(amount_y) - np.mean(amount_y)) / np.std(amount_y))
                 amount_choose = []
