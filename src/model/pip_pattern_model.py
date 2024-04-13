@@ -13,7 +13,7 @@ import pandas as pd
 from scipy.stats import mannwhitneyu
 
 from src.utils.pip_pattern_miner import PIPPatternMiner
-from pyswarm import pso
+# from pyswarm import pso
 
 
 class PipPatternModel:
@@ -68,15 +68,18 @@ class PipPatternModel:
         k_type = self.model_params["train"]["k_type"]
         
         print("amount {}".format(amount))
+        print("close std")
         data_list = list()
         arrs = list()
         amounts = list()
         signal_chooses = list()
+        closestds = list()
 
         test_data_list = list()
         test_arrs = list()
         test_amounts = list()
         test_signal_chooses = list()
+        test_closestds = list()
 
         if data_type == "train":
             data_files = self.train_data_files
@@ -98,24 +101,28 @@ class PipPatternModel:
 
             arr = train_data['close'].to_numpy()
             amount_data = train_data[amount]
+            closestd = train_data["close_rolling_24_std_mean"]
             signal_choose = train_data["signal"].to_numpy()        
             data_list.append(train_data)
             arrs.append(arr)
             amounts.append(amount_data)
             signal_chooses.append(signal_choose)
+            closestds.append(closestd)
 
             test_arr = test_data['close'].to_numpy()
             test_amount_data = test_data[amount]
+            test_closestd = test_data["close_rolling_24_std_mean"]
             test_signal_choose = test_data["signal"].to_numpy()        
             test_data_list.append(test_data)
             test_arrs.append(test_arr)
             test_amounts.append(test_amount_data)
             test_signal_chooses.append(test_signal_choose)
+            test_closestds.append(test_closestd)
         # if data_type == "train":
         #     self.train_data_list = data_list
         # elif data_type == "test":
         #     self.test_data_list = data_list    
-        return  arrs,  amounts,  signal_chooses, data_list, test_arrs, test_amounts, test_signal_chooses, test_data_list
+        return  arrs,  amounts, closestds,  signal_chooses, data_list, test_arrs, test_amounts, test_closestds, test_signal_chooses, test_data_list
     
     def get_file_path_abr(self):
         amount = self.model_params["train"]["amount"]
@@ -155,7 +162,7 @@ class PipPatternModel:
         pip_miner.k_range = self.model_params["train"]["k_range"]
         pip_miner.amount_type = self.model_params["train"]["amount_type"]
         retain_ks = [str(k) for k in range(1, pip_miner.k_range) if k % 5 == 0]
-        pip_miner.train_multi(self.train_arrs, vol=self.train_amounts, n_reps=-1, retain_ks=retain_ks)
+        pip_miner.train_multi(self.train_arrs, vol=self.train_amounts, n_reps=-1, retain_ks=retain_ks, closestds=self.train_closestd)
         
         return pip_miner
     
@@ -171,7 +178,7 @@ class PipPatternModel:
 
         self.train_data_files = [self.fdata_dir + "/{}.qfq.kdj.parquet".format(code) for code in self.all_code_list] 
         self.test_data_files = [self.fdata_dir + "/{}.qfq.kdj.parquet".format(code) for code in self.all_code_list]
-        self.train_arrs,  self.train_amounts,  self.train_signal_chooses, self.train_data_list, self.test_arrs,  self.test_amounts,  self.test_signal_chooses, self.test_data_list= self.get_train_data()
+        self.train_arrs,  self.train_amounts, self.train_closestd,  self.train_signal_chooses, self.train_data_list, self.test_arrs,  self.test_amounts, self.test_closestd,  self.test_signal_chooses, self.test_data_list= self.get_train_data()
         # self.test_arrs,  self.test_amounts,  self.test_signal_chooses, self.test_data_list = self.get_train_data(data_type="test")
         # Save the variables to a file
         # variables = {
@@ -213,7 +220,7 @@ class PipPatternModel:
         # self.pip_miner = self.load_model()
         self.pip_miner.signal_choose = self.test_signal_chooses
         # print(len(pip_miner.signal_chooses[0]))
-        self.pip_miner.test_multi(arr=self.test_arrs, vol=self.test_amounts)
+        self.pip_miner.test_multi(arr=self.test_arrs, vol=self.test_amounts, closestds=self.test_closestd)
         test_stat_df = self.pip_miner_stat(self.test_data_files, self.test_data_list, test=True)
         return test_stat_df
     
@@ -229,7 +236,8 @@ class PipPatternModel:
             train_stat_df = self.load_train_stat_df()
         
         test_stat_df = self.test_run()
-        self.evaluate_model(train_stat_df, test_stat_df)
+        sum_over_present = self.evaluate_model(train_stat_df, test_stat_df)
+        return sum_over_present
 
 
     def pip_miner_stat(self, data_files, data_list, test=False):
@@ -306,10 +314,11 @@ class PipPatternModel:
             self.pip_miner.train_multi_parent_cluster(self.model_params["test"]["k_parent"])
             # train_stat_df = self.pip_miner_stat(self.train_data_files, self.train_data_list)
         else:
-            train_stat_df = self.load_train_stat_df()
+            pass
+            # train_stat_df = self.load_train_stat_df()
 
         for cluster in cluster_list:
-            self.pip_miner.detail_cluster(int(cluster), self.train_data_list, file=self.file_path_abr + self.file_path_test_abr + cluster)
+            self.pip_miner.detail_cluster(int(cluster), self.train_data_list, file=self.file_path_abr + self.file_path_test_abr + str(cluster))
 
 
     def evaluate_model(self, train_stat_df, test_stat_df):
@@ -326,7 +335,7 @@ class PipPatternModel:
         test_data_choose = test_data[["target_mean", "target_num", "clusters"]]
         test_data_choose.rename(columns={"target_mean":"test_target_mean", "target_num":"test_target_num"}, inplace=True)
         data = data.merge(test_data_choose, left_on="clusters", right_on="clusters")
-        # data = data[data["target_num"]> 100]
+        data = data[data["target_num"] > 100]
         # data = data[data["mannwhitneyu_p"] < 0.2]
         if len(data) == 0:
             return 0.0
@@ -417,9 +426,14 @@ if __name__ == "__main__":
     elif fun == "test":
         model.test_run()
     elif fun == "train_test":
-        model.train_and_test_run()
+        getting = model.train_and_test_run()
+        with open("{}.result".format(params_file), 'w') as f:
+            f.write("{}".format(getting))
     elif fun == "detail":
-        list = sys.argv[4].split(",")
+        if sys.argv[4] == "all":
+            list = list(range(100))
+        else:  
+            list = sys.argv[4].split(",")
         model.detail_model(cluster_list=list)
 
     # def objective_function(x):

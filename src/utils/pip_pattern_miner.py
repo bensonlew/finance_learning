@@ -17,6 +17,7 @@ class PIPPatternMiner:
         self._n_pips = n_pips
         self._lookback = lookback
         self._hold_period = hold_period
+        self._close_std = None
         
         self._unique_pip_patterns = []
         self._unique_pip_indices = []
@@ -74,7 +75,11 @@ class PIPPatternMiner:
             sig = self._cluster_signals_dict[int(cluster)][n]
             cluster_df = data[sig == 1]
             merge_df = pd.concat([merge_df, cluster_df])
-        merge_df.to_csv(file + ".tsv", sep="\t") 
+        merge_df.to_csv(file + ".tsv", sep="\t")
+        corr_df = merge_df.corr()
+        corr_choose = corr_df[["target_close1"]]
+        corr_choose.to_csv(file + "_corr.tsv", sep="\t")
+
     
 
     def plot_cluster_examples(self, candle_data: pd.DataFrame, cluster_i: int, grid_size: int = 5):
@@ -177,16 +182,17 @@ class PIPPatternMiner:
             self._perm_martins.append(perm_martin)
 
     
-    def test_multi(self, arr: list, vol:list):
+    def test_multi(self, arr: list, vol:list, closestds: list):
         self.data_list = []
         self._unique_pip_patterns = []
         self._unique_pip_indices = []
         self._unique_pip_datasource=[]
         n = 0
-        for arr, vol in zip(arr, vol):
+        for arr, vol, closestd in zip(arr, vol, closestds):
             self._data = arr
             self.data_list.append(arr)
             self._amount = vol
+            self._close_std = closestd
 
             self._test_unique_patterns(n=n)
             n += 1
@@ -194,14 +200,15 @@ class PIPPatternMiner:
         
         
 
-    def train_multi(self, arr: list, vol:list, n_reps=-1, returns=None, retain_ks=[]):
+    def train_multi(self, arr: list, vol:list, n_reps=-1, returns=None, retain_ks=[], closestds=[]):
         # 多组数据训练
         self.data_list = []
         n = 0
-        for arr, vol in zip(arr, vol):
+        for arr, vol, closestd in zip(arr, vol, closestds):
             self._data = arr
             self.data_list.append(arr)
             self._amount = vol
+            self._close_std = closestd
 
             self._find_unique_patterns(n=n)
             n += 1
@@ -236,6 +243,16 @@ class PIPPatternMiner:
                 # 筛选部分时间点
                 continue
             start_i = i - self._lookback + 1
+
+            # choose low closestd position  
+            start_i_begin = start_i - int(self._lookback * 0.2)
+            start_i_end = start_i + int(self._lookback * 0.1)
+            if start_i_begin < 0:
+                start_i_begin = 0
+            start_min = np.array(self._close_std[start_i_begin: start_i_end]).argmin()
+            start_i = start_i_begin + start_min
+                       
+
             window = self._data[start_i: i + 1]
             pips_x, pips_y = find_pips(window, self._n_pips, 3)
             pips_x = [j + start_i for j in pips_x]
