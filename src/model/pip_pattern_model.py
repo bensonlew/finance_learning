@@ -335,10 +335,10 @@ class PipPatternModel:
         test_data_choose = test_data[["target_mean", "target_num", "clusters"]]
         test_data_choose.rename(columns={"target_mean":"test_target_mean", "target_num":"test_target_num"}, inplace=True)
         data = data.merge(test_data_choose, left_on="clusters", right_on="clusters")
-        data = data[data["target_num"] > 100]
-        # data = data[data["mannwhitneyu_p"] < 0.2]
-        if len(data) == 0:
-            return 0.0
+        data = data[data["target_num"]> 60]
+        data = data[data["mannwhitneyu_p"] < 0.1]
+        # if len(data) == 0:
+        #     return 0.0
         data.fillna(0, inplace=True)
         hold_period = 3 
         data["test_target_num2"]  = data["test_target_num"] /hold_period
@@ -354,7 +354,15 @@ class PipPatternModel:
         for choose_pct in [2, 5 ,10, 20, 30, 50, 70, 90, 100]:
             choose = data[data["test_target_num_sum"]< list(data["test_target_num_sum"])[-1]/100 * choose_pct]
             if len(choose) == 0:
-                return 0.0
+                record.update({
+                    "day" + str(choose_pct): 0,
+                    "all_get" + str(choose_pct): 0,
+                    "day_get" + str(choose_pct): 1.0,
+                    "test_day" + str(choose_pct): 0,
+                    "test_all_get" + str(choose_pct): 0,
+                    "test_day_get" + str(choose_pct): 1.0 
+                })
+                continue
             day = choose["target_num"].sum()/3
             choose["get_fun"] = choose.apply(get_fun, axis=1) 
             all_get = choose["get_fun"].prod()
@@ -372,6 +380,7 @@ class PipPatternModel:
                 "test_all_get" + str(choose_pct): test_all_get,
                 "test_day_get" + str(choose_pct): test_day_get 
             })
+
         
 
         sum_over_present = (float(record["test_day_get5"]) - float(record["test_day_get100"])) * 0.5 + \

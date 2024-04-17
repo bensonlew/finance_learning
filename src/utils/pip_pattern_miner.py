@@ -17,7 +17,7 @@ class PIPPatternMiner:
         self._n_pips = n_pips
         self._lookback = lookback
         self._hold_period = hold_period
-        self._close_std = None
+        self._close_std = []
         
         self._unique_pip_patterns = []
         self._unique_pip_indices = []
@@ -43,8 +43,12 @@ class PIPPatternMiner:
         self.data_list = list()
         self.signal_choose = signal_choose
         self.amount_type = "all"
+        self.amount_pct = 1.0
+        self.close_std_type = "all"
+        self.close_std_pct = 1.0
         self.k_range = 300
         self.cluster_method = "bi-kmeans"
+        self.start_range_pct = 0.0
 
     def get_fit_martin(self):
         return self._fit_martin
@@ -245,8 +249,9 @@ class PIPPatternMiner:
             start_i = i - self._lookback + 1
 
             # choose low closestd position  
-            start_i_begin = start_i - int(self._lookback * 0.2)
-            start_i_end = start_i + int(self._lookback * 0.1)
+            # 效果反而变差
+            start_i_begin = start_i - int(self._lookback * 2 * self.start_range_pct)
+            start_i_end = start_i + int(self._lookback * 1 * self.start_range_pct)
             if start_i_begin < 0:
                 start_i_begin = 0
             start_min = np.array(self._close_std[start_i_begin: start_i_end]).argmin()
@@ -258,6 +263,7 @@ class PIPPatternMiner:
             pips_x = [j + start_i for j in pips_x]
             
             amount_y = [self._amount[x] for x in pips_x]
+            close_std_y = [self._close_std[x] for x in pips_x]
             if np.isnan(amount_y[0]):
                 continue
             # Check internal pips to see if it is the same as last
@@ -272,7 +278,7 @@ class PIPPatternMiner:
                 # pips_y = np.log(pips_y)
                 pips_y = list((np.array(pips_y) - np.mean(pips_y)) / np.std(pips_y))
                 amount_y = list((np.array(amount_y) - np.mean(amount_y)) / np.std(amount_y))
-
+                # close_std_y = list((np.array(close_std_y) - np.mean(close_std_y)) / np.std(close_std_y)
                 # 只选择部分成交量
                 if self.amount_type == "all":
                     amount_choose = amount_y
@@ -290,7 +296,25 @@ class PIPPatternMiner:
                 elif self.amount_type == "no":
                     amount_choose = []
 
-                self._unique_pip_patterns.append(pips_y + amount_choose)
+                if self.close_std_type == "all":
+                    close_std_choose = close_std_y
+                elif self.close_std_type == "half":
+                    if len(close_std_y) % 2 == 0:
+                        close_std_choose = close_std_y[1::2]
+                    else:
+                        close_std_choose = close_std_y[::2]
+                elif self.close_std_type == "begin_end":
+                    close_std_choose = [close_std_y[0], close_std_y[-1]]
+                elif self.close_std_type == "tree":
+                    close_std_choose = [close_std_y[0], close_std_y[int(len(close_std_y)/2)], close_std_y[-1]]
+                elif self.close_std_type == "tail":
+                    close_std_choose = [close_std_y[0], close_std_y[-2], close_std_y[-1]]
+                elif self.close_std_type == "no":
+                    close_std_choose = []
+                amount_choose = [amount * self.amount_pct for amount in amount_choose]
+                close_std_choose = [close_std * self.close_std_pct for close_std in close_std_choose]
+
+                self._unique_pip_patterns.append(pips_y + amount_choose + close_std_choose)
 
                 self._unique_pip_indices.append(i)
                 self._unique_pip_datasource.append(n)
@@ -310,11 +334,21 @@ class PIPPatternMiner:
                 # 筛选部分时间点
                 continue
             start_i = i - self._lookback + 1
+
+            start_i_begin = start_i - int(self._lookback * 2 * self.start_range_pct)
+            start_i_end = start_i + int(self._lookback * 1 * self.start_range_pct)
+            if start_i_begin < 0:
+                start_i_begin = 0
+            start_min = np.array(self._close_std[start_i_begin: start_i_end]).argmin()
+            start_i = start_i_begin + start_min
+
             window = self._data[start_i: i + 1]
             pips_x, pips_y = find_pips(window, self._n_pips, 3)
             pips_x = [j + start_i for j in pips_x]
             
             amount_y = [self._amount[x] for x in pips_x]
+            close_std_y = [self._close_std[x] for x in pips_x]
+
             if np.isnan(amount_y[0]):
                 continue
             # Check internal pips to see if it is the same as last
@@ -346,11 +380,31 @@ class PIPPatternMiner:
                 elif self.amount_type == "no":
                     amount_choose = []
 
+                if self.close_std_type == "all":
+                    close_std_choose = close_std_y
+                elif self.close_std_type == "half":
+                    if len(close_std_y) % 2 == 0:
+                        close_std_choose = close_std_y[1::2]
+                    else:
+                        close_std_choose = close_std_y[::2]
+                elif self.close_std_type == "begin_end":
+                    close_std_choose = [close_std_y[0], close_std_y[-1]]
+                elif self.close_std_type == "tree":
+                    close_std_choose = [close_std_y[0], close_std_y[int(len(close_std_y)/2)], close_std_y[-1]]
+                elif self.close_std_type == "tail":
+                    close_std_choose = [close_std_y[0], close_std_y[-2], close_std_y[-1]]
+                elif self.close_std_type == "no":
+                    close_std_choose = []
+                amount_choose = [amount * self.amount_pct for amount in amount_choose]
+                close_std_choose = [close_std * self.close_std_pct for close_std in close_std_choose]
+
+
+
 
                 corr_list = []
                 for cluster_center in self._cluster_centers:
                     corr_list.append(
-                        np.linalg.norm(np.array(pips_y + amount_choose) - np.array(cluster_center))
+                        np.linalg.norm(np.array(pips_y + amount_choose + close_std_choose) - np.array(cluster_center))
                         # np.corrcoef(pips_y + amount_choose, cluster_center)[0][1]
                     )
 
