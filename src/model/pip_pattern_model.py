@@ -31,6 +31,9 @@ class PipPatternModel:
                 "hold_period": 3,
                 "k_range": 300,
                 "amount_type": "no",
+                "amount_pct": 0.1,
+                "close_std_type": "no",
+                "close_std_pct": 1.0,
             },
             "test": {
                 # 减少计算每个模型里保存不同的k
@@ -101,7 +104,7 @@ class PipPatternModel:
 
             arr = train_data['close'].to_numpy()
             amount_data = train_data[amount]
-            closestd = train_data["close_rolling_24_std_mean"]
+            closestd = train_data["close_rolling_2880_std_mean"]
             signal_choose = train_data["signal"].to_numpy()        
             data_list.append(train_data)
             arrs.append(arr)
@@ -111,7 +114,7 @@ class PipPatternModel:
 
             test_arr = test_data['close'].to_numpy()
             test_amount_data = test_data[amount]
-            test_closestd = test_data["close_rolling_24_std_mean"]
+            test_closestd = test_data["close_rolling_2880_std_mean"]
             test_signal_choose = test_data["signal"].to_numpy()        
             test_data_list.append(test_data)
             test_arrs.append(test_arr)
@@ -134,8 +137,11 @@ class PipPatternModel:
         hold_period = self.model_params["train"]["hold_period"]
         k_range = self.model_params["train"]["k_range"]
         amount_type = self.model_params["train"]["amount_type"]
+        close_std_type = self.model_params["train"]["close_std_type"]
+        amount_pct = self.model_params["train"]["amount_pct"]
+        close_std_pct = self.model_params["train"]["close_std_pct"] 
         version = self.version        
-        file_path = os.path.join(self.fdata_dir, "train", "_".join([amount, reg, reg_type, k_type, str(n_pips), str(lookback), str(hold_period), str(k_range), str(amount_type), str(version)]))
+        file_path = os.path.join(self.fdata_dir, "train", "_".join([amount, reg, reg_type, k_type, str(n_pips), str(lookback), str(hold_period), str(k_range), str(amount_type), str(close_std_type), str(amount_pct), str(close_std_pct),str(version)]))
         return file_path
     
     def get_file_path_test_abr(self):
@@ -161,7 +167,13 @@ class PipPatternModel:
         pip_miner = PIPPatternMiner(n_pips=n_pips, lookback=lookback, hold_period=hold_period, signal_choose=self.train_signal_chooses)
         pip_miner.k_range = self.model_params["train"]["k_range"]
         pip_miner.amount_type = self.model_params["train"]["amount_type"]
-        retain_ks = [str(k) for k in range(1, pip_miner.k_range) if k % 5 == 0]
+        pip_miner.close_std_type = self.model_params["train"]["close_std_type"]
+        pip_miner.amount_pct = self.model_params["train"]["amount_pct"]
+        pip_miner.close_std_pct = self.model_params["train"]["close_std_pct"]
+        if self.model_params["train"]["k_parent_retain"]:            
+            retain_ks = [str(k) for k in range(1, pip_miner.k_range) if k % 5 == 0]
+        else:
+            retain_ks = []
         pip_miner.train_multi(self.train_arrs, vol=self.train_amounts, n_reps=-1, retain_ks=retain_ks, closestds=self.train_closestd)
         
         return pip_miner

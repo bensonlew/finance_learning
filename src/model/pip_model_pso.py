@@ -42,11 +42,15 @@ model_params = {
         "reg": "close480_close2880",
         "reg_type": "down",
         "k_type": "K72",
-        "n_pips": 7,
-        "lookback": 240,
+        "n_pips": 9,
+        "lookback": 480,
         "hold_period": 3,
-        "k_range": 100,
-        "amount_type": "no",
+        "k_range": 150,
+        "amount_type": "tree",
+        "close_std_type": "tree",
+        "k_parent_retain": False,
+        "amount_pct":0.1,
+        "close_std_pct": 1.0
     },
     "test": {
         # 减少计算每个模型里保存不同的k
@@ -69,6 +73,17 @@ def convert_params(params):
     return "params{}.json".format(name)
 
 
+def convert_params2(params):
+    # Convert the parameters to the correct format
+    model_params1 = copy.deepcopy(model_params)
+    
+    for n, param_name in enumerate(["amount_pct", "close_std_pct"]):
+        model_params1["train"][param_name] = round(params[n], 3)
+    name = "_".join([str(x) for x in model_params1["train"].values()])
+    with open("params_amount_std{}.json".format(name), "w") as f:
+        json.dump(model_params1, f)
+    return "params_amount_std{}.json".format(name)
+
 # Define the objective function
 def objective_function(params):
     # TODO: Define your objective function based on the PipPatternModel
@@ -77,7 +92,7 @@ def objective_function(params):
     # Return the objective value
     model = PipPatternModel()
 
-    params_file = convert_params(params)
+    params_file = convert_params2(params)
     if os.path.exists("{}.result".format(params_file)):
         with open("{}.result".format(params_file), 'r') as f:
             return - float(f.readline().strip())       
@@ -126,8 +141,11 @@ def test_objective_function(params):
     
 # Define the bounds for each parameter
 # TODO: Set the appropriate bounds for each parameter
-lower_bounds = [0 for i in params_ranges]
-upper_bounds = [len(i) -1 for i in params_ranges]
+# lower_bounds = [0 for i in params_ranges]
+# upper_bounds = [len(i) -1 for i in params_ranges]
+
+lower_bounds = [0.35, 0.0]
+upper_bounds = [0.35, 30.0]
 
 # Set the number of particles and iterations for PSO
 num_particles = 30
@@ -136,7 +154,8 @@ num_iterations = 100
 # Run PSO optimization
 # best_params, best_value = pso(objective_function, lower_bounds, upper_bounds, swarmsize=num_particles, maxiter=num_iterations)
 set_run_mode(objective_function, 'multiprocessing')
-pso = PSO(func=objective_function, dim=len(params_ranges), pop=20, max_iter=50, lb=lower_bounds, ub=upper_bounds)
+# pso = PSO(func=objective_function, dim=len(params_ranges), pop=20, max_iter=50, lb=lower_bounds, ub=upper_bounds)
+pso = PSO(func=objective_function, dim=2, pop=20, max_iter=50, lb=lower_bounds, ub=upper_bounds)
 best_params, best_performance = pso.run()
 # Print the best parameters and objective value
 print("Best Parameters:", best_params)

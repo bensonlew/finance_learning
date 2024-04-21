@@ -250,12 +250,12 @@ class PIPPatternMiner:
 
             # choose low closestd position  
             # 效果反而变差
-            start_i_begin = start_i - int(self._lookback * 2 * self.start_range_pct)
-            start_i_end = start_i + int(self._lookback * 1 * self.start_range_pct)
-            if start_i_begin < 0:
-                start_i_begin = 0
-            start_min = np.array(self._close_std[start_i_begin: start_i_end]).argmin()
-            start_i = start_i_begin + start_min
+            # start_i_begin = start_i - int(self._lookback * 2 * self.start_range_pct)
+            # start_i_end = start_i + int(self._lookback * 1 * self.start_range_pct)
+            # if start_i_begin < 0:
+            #     start_i_begin = 0
+            # start_min = np.array(self._close_std[start_i_begin: start_i_end]).argmin()
+            # start_i = start_i_begin + start_min
                        
 
             window = self._data[start_i: i + 1]
@@ -295,6 +295,8 @@ class PIPPatternMiner:
                     amount_choose = [amount_y[0], amount_y[-2], amount_y[-1]]
                 elif self.amount_type == "no":
                     amount_choose = []
+                else:
+                    amount_choose = []
 
                 if self.close_std_type == "all":
                     close_std_choose = close_std_y
@@ -310,6 +312,8 @@ class PIPPatternMiner:
                 elif self.close_std_type == "tail":
                     close_std_choose = [close_std_y[0], close_std_y[-2], close_std_y[-1]]
                 elif self.close_std_type == "no":
+                    close_std_choose = []
+                else:
                     close_std_choose = []
                 amount_choose = [amount * self.amount_pct for amount in amount_choose]
                 close_std_choose = [close_std * self.close_std_pct for close_std in close_std_choose]
@@ -335,12 +339,12 @@ class PIPPatternMiner:
                 continue
             start_i = i - self._lookback + 1
 
-            start_i_begin = start_i - int(self._lookback * 2 * self.start_range_pct)
-            start_i_end = start_i + int(self._lookback * 1 * self.start_range_pct)
-            if start_i_begin < 0:
-                start_i_begin = 0
-            start_min = np.array(self._close_std[start_i_begin: start_i_end]).argmin()
-            start_i = start_i_begin + start_min
+            # start_i_begin = start_i - int(self._lookback * 2 * self.start_range_pct)
+            # start_i_end = start_i + int(self._lookback * 1 * self.start_range_pct)
+            # if start_i_begin < 0:
+            #     start_i_begin = 0
+            # start_min = np.array(self._close_std[start_i_begin: start_i_end]).argmin()
+            # start_i = start_i_begin + start_min
 
             window = self._data[start_i: i + 1]
             pips_x, pips_y = find_pips(window, self._n_pips, 3)
