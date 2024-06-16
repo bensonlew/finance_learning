@@ -144,8 +144,8 @@ def test_objective_function(params):
 # lower_bounds = [0 for i in params_ranges]
 # upper_bounds = [len(i) -1 for i in params_ranges]
 
-lower_bounds = [0.35, 0.0]
-upper_bounds = [0.35, 30.0]
+lower_bounds = [0.2, 0.5]
+upper_bounds = [0.4, 20.0]
 
 # Set the number of particles and iterations for PSO
 num_particles = 30

@@ -98,6 +98,7 @@ class PipPatternModel:
                 data["signal"][data[reg]<0] = False
             elif reg_type == "down":
                 data["signal"][data[reg]>0] = False
+            data["close_rolling_2880_std_mean"].fillna(0.0, inplace=True)
             
             train_data = data[data.index<"2023"]
             test_data = data[data.index>="2023"]
@@ -105,6 +106,7 @@ class PipPatternModel:
             arr = train_data['close'].to_numpy()
             amount_data = train_data[amount]
             closestd = train_data["close_rolling_2880_std_mean"]
+            # closestd.fillna(0.0, inplace=True)
             signal_choose = train_data["signal"].to_numpy()        
             data_list.append(train_data)
             arrs.append(arr)
@@ -115,6 +117,7 @@ class PipPatternModel:
             test_arr = test_data['close'].to_numpy()
             test_amount_data = test_data[amount]
             test_closestd = test_data["close_rolling_2880_std_mean"]
+            # test_closestds.fillna(0.0, inplace=True)
             test_signal_choose = test_data["signal"].to_numpy()        
             test_data_list.append(test_data)
             test_arrs.append(test_arr)
