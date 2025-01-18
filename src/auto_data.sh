@@ -1,0 +1,1 @@
+sh /liubinxu/liubinxu/finance/learning/src/data/update_data.sh >> /liubinxu/liubinxu/finance/learning/src/data/update_data.log 2 >> /liubinxu/liubinxu/finance/learning/src/data/update_data.err

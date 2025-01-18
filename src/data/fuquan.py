@@ -1,5 +1,6 @@
 from QUANTAXIS.QAData.data_fq import QA_data_etf_to_fq, QA_data_stock_to_fq
 from QUANTAXIS.QAFetch.QAQuery import QA_fetch_etf_min, QA_fetch_stock_min, QA_fetch_stock_transaction
+from QUANTAXIS.QAFetch.QATdx import QA_fetch_get_stock_list
 import pymongo
 uri = 'mongodb://localhost:27017'
 import pandas as pd
@@ -11,15 +12,30 @@ data_dir = "/data/finance/"
 
 
 def get_tdx_qfq_etf_min5data(code):
+    
     df = QA_fetch_etf_min(code, "2010-01-01", "2030-01-01", format="pd")
     code_hfq = QA_data_etf_to_fq(df, '01')
+    a1t = code_hfq["datetime"][0]
+    if a1t.hour == 9 & a1t.hour == 35:
+        pass
+    else:
+        code_hfq = code_hfq[code_hfq["date"]>code_hfq["date"][0]]
     print(len(code_hfq))
+    if len(code_hfq) % 48 != 0:
+        print("{} lack data".format(code))
+    else:
+        print("{} ok".format(code))
     code_hfq.to_parquet(data_dir + "{}.qfq.parquet".format(code))
 
 
 def get_tdx_qfq_stock_min5data(code):
     df = QA_fetch_stock_min(code, "2010-01-01", "2030-01-01", format="pd", frequence="5min")
     code_hfq = QA_data_stock_to_fq(df, '01', '5min')
+    a1t = code_hfq["datetime"][0]
+    if a1t.hour == 9 & a1t.hour == 35:
+        pass
+    else:
+        code_hfq = code_hfq[code_hfq["date"]>code_hfq["date"][0]]
     code_hfq.to_parquet(data_dir + "{}.qfq.parquet".format(code))
 
 def get_tdx_stock_trac(code):
@@ -39,10 +55,16 @@ def find2mongo2df_etfranked():
     records = coll.find({"date":"2023-12-04"})
     return records
 
+def get_etf_code_list():
+    __index_list = QA_fetch_get_stock_list('etf')
+    return list(__index_list["code"])
+
+
 if __name__ == "__main__":
     # records = find2mongo2df()
-    records = find2mongo2df_etfranked()
-    code_list = [record["code"][2:] for record in records]
+    # records = find2mongo2df_etfranked()
+    # code_list = [record["code"][2:] for record in records]
+    code_list = get_etf_code_list()
     # for record in records:
     #     code = record["code"]
     #     print(code)
@@ -124,7 +146,9 @@ if __name__ == "__main__":
     # code_list = ["510050", "512100", "510880", "512690", "159915", "000016", "000852", "399006"]
     for code in code_list:
         print("code {}".format(code))
-        get_tdx_qfq_etf_min5data(code)
-
+        try:
+            get_tdx_qfq_etf_min5data(code)
+        except:
+            print("error {}".format(code))
 
 

@@ -9,6 +9,35 @@ from src.feature_engineering.autoregressive_features import *
 from scipy.stats import pearsonr
 import sys
 import os
+import talib as ta
+from gs_quant.timeseries.technicals import exponential_std
+
+
+def calculate_macd(df, level=1):
+    
+    short=12 * level
+    long=26 * level
+    signal=9 * level
+    df['macd_{}'.format(level)], df['macdsignal_{}'.format(level)], df['macdhist_{}'.format(level)] = ta.MACD(df['close'], fastperiod=short, slowperiod=long, signalperiod=signal)
+    return df
+
+def calculate_bolling(df, level=1):
+    
+    n = 20 * level
+
+    df['bbands_upper_{}'.format(level)], df['bbands_middle_{}'.format(level)], df['bbands_lower_{}'.format(level)] = ta.BBANDS(df['close'], timeperiod=n, nbdevup=2, nbdevdn=2, matype=0)
+    df['bbands_normal_{}'.format(level)] = (df['close'] - df['bbands_middle_{}'.format(level)]) / (df['bbands_upper_{}'.format(level)] - df['bbands_lower_{}'.format(level)])
+    return df
+
+def calculate_es(df, level=1):
+    
+    beta = 1 - (0.9 ** level)
+    df['ev_{}'.format(level)] = exponential_std(df["close"], beta)
+    df['esv_{}'.format(level)] = exponential_std(df["close"].diff(), beta)
+
+    return df
+
+
 
 def calculate_kdj(df, n=9, k_period=3, d_period=3, abr=""):
     # 计算最高价的 n 天最高价和最低价的 n 天最低价
@@ -118,22 +147,58 @@ def add_kdj_type(data, k_abr):
     data.drop(['k_last'], axis=1, inplace=True)
     return data
 
-def run(code=None):
-    fdata_dir = os.environ.get('FDATA', '/liubinxu/liubinxu/finance/learning/data')
-    data = pd.read_parquet(fdata_dir + "/{}.qfq.parquet".format(code))
+def run(code=None, tickets=False):
+    fdata_dir = os.environ.get('FDATA', '/data/finance/')    
+    data = pd.read_parquet(fdata_dir + "/{}.qfq.merge.parquet".format(code))
+    if tickets == True:
+        large_feature_data = pd.read_parquet(fdata_dir + "/large_tickets_data/{}.parquet".format(code))
+        large_feature_data.drop(columns=["vol"], inplace=True)
+        data = pd.merge(data, large_feature_data, left_index=True, right_index=True, how="left")
+
     data["datetime"] = data["datetime"].map(str)
     data,fea = add_seasonal_rolling_features(data, seasonal_periods=[48], rolls=[20], column="amount" )
     data,fea = add_seasonal_rolling_features(data, seasonal_periods=[48], rolls=[5], column="amount" )
     data,fea = add_seasonal_rolling_features(data, seasonal_periods=[48], rolls=[60], column="amount" )
+    
+    if tickets:
+        data,fea = add_seasonal_rolling_features(data, seasonal_periods=[48], rolls=[20], column="turnover" )
+        data,fea = add_seasonal_rolling_features(data, seasonal_periods=[48], rolls=[5], column="turnover" )
+        data,fea = add_seasonal_rolling_features(data, seasonal_periods=[48], rolls=[60], column="turnover" )
+
+
     data["amount_normalize5"] = np.log(data["amount"]/data["amount_48_seasonal_rolling_5_mean"])
     data["amount_normalize20"] = np.log(data["amount"]/data["amount_48_seasonal_rolling_20_mean"])
     data["amount_normalize60"] = np.log(data["amount"]/data["amount_48_seasonal_rolling_60_mean"])
+
+    if tickets:
+        data["turnover_normalize5"] = np.log(data["turnover"]/data["turnover_48_seasonal_rolling_5_mean"])
+        data["turnover_normalize20"] = np.log(data["turnover"]/data["turnover_48_seasonal_rolling_20_mean"])
+        data["turnover_normalize60"] = np.log(data["turnover"]/data["turnover_48_seasonal_rolling_60_mean"])
+
+        data["buy_turnover_normalize5"] = np.log(data["buy_turnover"]/data["turnover_48_seasonal_rolling_5_mean"])
+        data["buy_turnover_normalize20"] = np.log(data["buy_turnover"]/data["turnover_48_seasonal_rolling_20_mean"])
+        data["buy_turnover_normalize60"] = np.log(data["buy_turnover"]/data["turnover_48_seasonal_rolling_60_mean"])
+
+        data["sell_turnover_normalize5"] = np.log(data["sell_turnover"]/data["turnover_48_seasonal_rolling_5_mean"])
+        data["sell_turnover_normalize20"] = np.log(data["sell_turnover"]/data["turnover_48_seasonal_rolling_20_mean"])
+        data["sell_turnover_normalize60"] = np.log(data["sell_turnover"]/data["turnover_48_seasonal_rolling_60_mean"])
+
+        data["turnover_imbalance_rate"] = data["turnover_imbalance"] / data["turnover"]
+
     # data["amount_diff"] = data["amount_normalize"].diff()
     data, features = add_rolling_features(data, rolls=[6, 24, 96, 480, 2880], column="close", agg_funcs=["mean", "std", "std_mean", "exp_mean"])
     data, features = add_rolling_features(data, rolls=[24, 96, 480], column="amount_normalize5", agg_funcs=["mean", "std", "std_mean", "exp_mean"])
     data, features = add_rolling_features(data, rolls=[24, 96, 480], column="amount_normalize20", agg_funcs=["mean", "std", "std_mean", "exp_mean"])
     data, features = add_rolling_features(data, rolls=[24, 96, 480], column="amount_normalize60", agg_funcs=["mean", "std", "std_mean", "exp_mean"])
     # data, features2 = add_rolling_features(data, rolls=[24, 96, 480], column="amount_diff", agg_funcs=["mean", "std", "std_mean"])
+    if tickets:
+        for normal_amount in [
+                            "turnover_normalize5", "turnover_normalize20", "turnover_normalize60",
+                            "buy_turnover_normalize5", "buy_turnover_normalize20", "buy_turnover_normalize60",                          
+                            "sell_turnover_normalize5", "sell_turnover_normalize20", "sell_turnover_normalize60",
+                            "turnover_imbalance_rate"
+                            ]:
+            data, features = add_rolling_features(data, rolls=[24, 96, 480], column="{}".format(normal_amount), agg_funcs=["mean", "std", "std_mean", "exp_mean"])
 
     data["close6_close24"] = data["close_rolling_6_mean"] - data["close_rolling_24_mean"]
     data["close6_close96"] = data["close_rolling_6_mean"] - data["close_rolling_96_mean"]
@@ -142,17 +207,25 @@ def run(code=None):
     data["close24_close2880"] = data["close_rolling_24_mean"] - data["close_rolling_2880_mean"]
     data["close480_close2880"] = data["close_rolling_480_mean"] - data["close_rolling_2880_mean"]
 
-
-    # data, add_feature = add_corr_feature(data, rolls=[24, 96, 480], column="close", column2="amount_normalize")
-    for normal_amount in ["amount_normalize5", "amount_normalize20", "amount_normalize60"]:
-        data, add_feature = add_corr_feature(data, rolls=[24, 96, 480], column="close_rolling_24_mean", column2="{}_rolling_24_mean".format(normal_amount))    
-        data, add_feature = add_corr_feature(data, rolls=[24, 96, 480], column="close_rolling_96_mean", column2="{}_rolling_96_mean".format(normal_amount))    
-        data, add_feature = add_corr_feature(data, rolls=[24, 96, 480], column="close_rolling_480_mean", column2="{}_rolling_480_mean".format(normal_amount))    
+    close_corr2 = ["amount_normalize5", "amount_normalize20", "amount_normalize60"]
+    if tickets:
+        # close_corr2 = []
+        # data, add_feature = add_corr_feature(data, rolls=[24, 96, 480], column="close", column2="amount_normalize")
+        close_corr2 +=  ["turnover_normalize5", "turnover_normalize20", "turnover_normalize60",
+                        "buy_turnover_normalize5", "buy_turnover_normalize20", "buy_turnover_normalize60",
+                        "sell_turnover_normalize5", "sell_turnover_normalize20", "sell_turnover_normalize60",
+                        "turnover_imbalance_rate"]
+        for normal_amount in close_corr2:
+            data, add_feature = add_corr_feature(data, rolls=[24, 96, 480], column="close", column2="{}".format(normal_amount))    
+            data, add_feature = add_corr_feature(data, rolls=[24, 96, 480], column="close_rolling_24_mean", column2="{}_rolling_24_mean".format(normal_amount))    
+            data, add_feature = add_corr_feature(data, rolls=[24, 96, 480], column="close_rolling_96_mean", column2="{}_rolling_96_mean".format(normal_amount))    
+            data, add_feature = add_corr_feature(data, rolls=[24, 96, 480], column="close_rolling_480_mean", column2="{}_rolling_480_mean".format(normal_amount))    
 
 
     data = calculate_kdj(data, n=9*2, k_period=3*2, d_period=3*2,  abr="18")
     data = calculate_kdj(data, n=9*4, k_period=3*4, d_period=3*4,  abr="36")
     data = calculate_kdj(data, n=9*8, k_period=3*8, d_period=3*8,  abr="72")
+    data = calculate_kdj(data, n=9*16, k_period=3*16, d_period=3*16,  abr="144")
 
 
     data["target_close1"] = (data["close"].shift(-48) - data["close"])/data["close"]
@@ -164,11 +237,21 @@ def run(code=None):
     data = add_kdj_type(data, "K36")
     data = add_kdj_type(data, "K72")
 
+    for level in [1, 3, 6, 12, 24, 48, 96]:
+        data = calculate_macd(data, level=level)
+        data = calculate_bolling(data, level=level)
+        data = calculate_es(data, level=level)
+
+
+    
+
 
     # data_choose = data[['open', 'close', 'high', 'low', 'vol', 'amount', 'datetime', 'code','date', 'amount_normalize', 'K', 'D', 'J', "close_rolling_480_std", "amount_normalize_rolling_6_mean", "amount_diff_rolling_24_std"]]
     data_choose = data
-    data_choose.to_parquet(fdata_dir + "/{}.qfq.kdj.parquet".format(code))
+    data_choose.to_parquet(fdata_dir + "/{}.qfq.merge.kdj.parquet".format(code))
 
+
+    
 
     # 择时策略
     # data["k_last"] = data["K"].shift(1)

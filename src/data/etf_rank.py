@@ -25,7 +25,7 @@ def etf_hot_rank_detail_em(symbol: str = "SH510050") -> pd.DataFrame:
     }
     r = requests.post(url_rank, json=payload)
     data_json = r.json()
-    # print(data_json)
+    print(data_json)
     temp_df = pd.DataFrame(data_json["data"])
     temp_df["证券代码"] = symbol
     # print(temp_df)

@@ -12,12 +12,10 @@ from sklearn.metrics import accuracy_score
 from sklearn.model_selection import GridSearchCV
 from sklearn.model_selection import ParameterGrid
 import os
-from imblearn.over_sampling import SMOTE  
+from imblearn.over_sampling import SMOTE
 from sklearn.impute import SimpleImputer
 from sklearn.impute import KNNImputer
 
-os.environ["OPENBLAS_NUM_THREADS"] = "64"  # 或更小的数值
-os.environ["OMP_NUM_THREADS"] = "64"
 
 
 chan_feature_files = glob.glob(sys.argv[1])
@@ -27,7 +25,7 @@ if os.path.exists("chan_feature_df.parquet"):
     chan_feature_df = pd.read_parquet("chan_feature_df.parquet")
 else:
     feature_list = []
-    for chan_feature_file in chan_feature_files:    
+    for chan_feature_file in chan_feature_files:
         print(chan_feature_file)
         with open(chan_feature_file) as f:
             for line in f:
@@ -37,10 +35,7 @@ else:
                 try:
                     fea_dict = json.loads(cols[-1])
                     fea_dict["time"] = cols[0]
-                    if "__" in cols[1]:
-                        fea_dict["label"] = cols[1].split("__")[0]
-                    else:
-                        fea_dict["label"] = cols[1]
+                    fea_dict["label"] = cols[1]
                     feature_list.append(fea_dict)
                 except Exception as e:
                     print("error {} {}".format(chan_feature_file, line))
@@ -62,12 +57,12 @@ X_drop_list = ["now_seg", "last_seg", "now_segseg", "last_segseg", "now_segzs", 
 
 X_drop_list += ["time", "label"]
 X_drop_list += [c for c in chan_feature_df.columns if c.startswith("fcmp__") or c.startswith("frange__") or c.startswith("fpoint__") or c.endswith("__is_sure")]
-X_drop_list += ["type"]
+
 X_contain = [c for c in chan_feature_df.columns if c not in X_drop_list]
 # 划分训练集和测试集
 # X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-train = chan_feature_df[chan_feature_df["time"] <="2022/07"]
-test = chan_feature_df[chan_feature_df["time"] >"2022/07"]
+train = chan_feature_df[chan_feature_df["time"] <="2023/07"]
+test = chan_feature_df[chan_feature_df["time"] >"2023/07"]
 # X_train = train
 y_train = train["label"]
 X_train = train[X_contain]
@@ -82,23 +77,19 @@ y_train[y_train=="0"] = 0
 # 创建 NaN 的标记列
 # X_train['NaN_flag'] = X_train.isna().any(axis=1).astype(int)
 # imputer = KNNImputer(n_neighbors=5)
-if False:
-    # 1. 临时用特定值填充 NaN（比如 -999），并进行 SMOTE 过采样
-    imputer = SimpleImputer(strategy='constant', fill_value=-99999)  # 临时填充 -999
-    X_train_temp = imputer.fit_transform(X_train)
-    y_train = pd.Series(y_train).astype('category')
+# 1. 临时用特定值填充 NaN（比如 -999），并进行 SMOTE 过采样
+imputer = SimpleImputer(strategy='constant', fill_value=-99999)  # 临时填充 -999
+X_train_temp = imputer.fit_transform(X_train)
+y_train = pd.Series(y_train).astype('category')
 
-    # 2. 执行 SMOTE 过采样
-    smote = SMOTE(random_state=42)
-    X_resampled, y_resampled = smote.fit_resample(X_train_temp, y_train)
+# 2. 执行 SMOTE 过采样
+# smote = SMOTE(random_state=42)
+# X_resampled, y_resampled = smote.fit_resample(X_train_temp, y_train)
 
-    # 3. 将临时值 (-999) 恢复为 NaN
-    X_resampled = pd.DataFrame(X_resampled, columns=X_train.columns)
-    X_resampled.columns = X_train.columns
-    X_resampled.replace(-99999, np.nan, inplace=True)
-else:
-    X_resampled = X_train
-    y_resampled = y_train
+# # 3. 将临时值 (-999) 恢复为 NaN
+# X_resampled = pd.DataFrame(X_resampled, columns=X_train.columns)
+# X_resampled.columns = X_train.columns
+# X_resampled.replace(-99999, np.nan, inplace=True)
 # X_train_filled = pd.DataFrame(X_train_filled, columns=X_train.columns)
 
 # X_train_filled = imputer.fit_transform(X_train)
@@ -125,8 +116,8 @@ y_test[y_test=="0"] = 0
 
 X_test.to_parquet("X_test.parquet")
 y_test.to_pickle("y_test.pickle")
-X_train.to_parquet("X_train.parquet")
-y_train.to_pickle("y_train.pickle")
+# X_train.to_parquet("X_train.parquet")
+# y_train.to_pickle("y_train.pickle")
 
 
 
@@ -160,17 +151,16 @@ feature_weight_dict= {
 }
 
 feature_weight = np.array(list(feature_weight_dict.values()))
-xgb_model = xgb.XGBClassifier(objective="multi:softprob", num_class=5, random_state=42, n_jobs=64, eval_metric='aucpr')
+xgb_model = xgb.XGBClassifier(objective="multi:softprob", num_class=5, random_state=42, n_jobs=100, eval_metric='aucpr')
 # feature_weights=feature_weight, 
 
 # 4. 设置参数网格
 param_grid = {
     'num_class': [5],
     'objective': ['multi:softprob'],
-    # 'max_delta_step': [1, 2, 3],
     'eta': [0.1],  # 学习率
     'n_estimators': [100],    # 弱学习器的个数
-    'max_depth': [7,8,9,10],             # 树的最大深度
+    'max_depth': [9, 10, 11, 12],             # 树的最大深度
     'subsample': [ 0.9],       # 每棵树使用数据的比例
     'colsample_bytree': [0.5],# 每棵树随机采样的特征比例
     'gamma': [0.2],             # 惩罚项
@@ -202,74 +192,5 @@ param_grid = {
 # bst = grid_search.best_estimator_
 # bst.save_model("{}.xgb.model.json".format(time_stamp))
 
-print("feature", X_resampled.columns)
-
-# 保存每一个超参数组合对应的模型
-all_models = []
-for params in ParameterGrid(param_grid):
-    # 设置模型参数
-    xgb_model.set_params(**params)
-    xgb_model.fit(X_resampled, y_resampled)
-    
-    # 保存模型
-    model_filename = f'{time_stamp}.model_lr_depth_{params["max_depth"]}.joblib'
-    xgb_model.save_model(model_filename)
-    try:
-        dot_data = xgb.to_graphviz(xgb_model, num_trees=0)
-        dot_data.render("{}.svg".format(model_filename), format="svg")
-    except Exception as e:
-        print(e)
-
-    try:
-        df1 = xgb_model.get_booster().trees_to_dataframe()
-        df1.to_csv("{}.tree.xls".format(model_filename), index=False)
-    except Exception as e:
-        print(e)
-    all_models.append(model_filename)
-    
-bst = xgb_model
-
-
-y_pred_prob = bst.predict(X_test)
-# y_pred = y_pred_prob.argmax(axis=1)
-
-# 保存每一个参数组合的模型
-# models = grid_search.cv_results_['models']
-# for i, model in enumerate(models):
-#     model.save_model("{}.xgb.model_{}.json".format(time_stamp, i))
-
-
-# 9. 计算并输出准确率
-try:
-    accuracy = accuracy_score(list(y_test), y_pred_prob)
-    print("测试集准确率：", accuracy)
-
-except Exception as e:
-    print(e)
-
-
-
-
-
-# # 训练模型
-# num_round = 50  # 决策树的数量（即迭代次数）
-# bst = xgb.train(params, dtrain, num_boost_round=num_round)
-
-# 预测 (概率分布)
-# y_pred_prob = bst.predict(dtest)
-
-dot_data = xgb.to_graphviz(bst, num_trees=0)
-try:
-    dot_data.render("tree", format="svg")
-    with open("{}.xgb.model.dot".format(time_stamp), "w") as f:
-        f.write(dot_data.source)
-except Exception as e:
-    print(e)
-
-# 预测测试集
-# y_pred = xgb_clf.predict(X_test)
-# y_pred = y_pred_prob.argmax(axis=1)
-
-# # 评估模型
-# accuracy = accuracy_score(list(y_test), y_pred)
-# print("Accuracy:", accuracy)
+# print("feature", X_resampled.columns)
+# X_resampled.to_csv("X_resampled.csv")
