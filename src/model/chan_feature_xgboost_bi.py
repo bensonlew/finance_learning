@@ -62,6 +62,19 @@ else:
 # range_rate12_cmp: object, fcmp__now_segseg__range_rate13_cmp: object, fcmp__last_segseg__range_rate12_cmp: object, fcmp__last_segseg__range_rate13_cmp: object, frange__now_segseg__zs1: object, frange__now_segseg
 # __zs1after: object, frange__now_segseg__zs1before: object, frange__last_segseg__zs1: object, frange__last_segseg__zs1after: object, frange__last_segseg__zs1before
 print("read data finish")
+
+# 对每个特征，  如果特征最小值小于0的数量大于 大于0的数量的 30 %，增加绝对值特征
+for c in chan_feature_df.columns:
+    # 判断是数值型特征
+    if chan_feature_df[c].dtype == "float64":   
+        if (chan_feature_df[c] < 0).sum() > (chan_feature_df[c] > 0).sum() * 0.3:
+            chan_feature_df[c + "_abs"] = chan_feature_df[c].abs()
+            chan_feature_df[c + "_abs_log"] = np.log(chan_feature_df[c].abs() + 1e-6)
+        else:
+            chan_feature_df[c + "_abs_log"] = np.log(chan_feature_df[c].abs() + 1e-6)
+
+
+
 chan_feature_df.fillna(np.nan, inplace=True)
 if "type" in chan_feature_df.columns:
     chan_feature_df["type"] = chan_feature_df["type"].map(lambda x:x[0])
