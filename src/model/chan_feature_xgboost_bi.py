@@ -16,10 +16,12 @@ from imblearn.over_sampling import SMOTE
 from sklearn.impute import SimpleImputer
 from sklearn.impute import KNNImputer
 from sklearn.preprocessing import LabelBinarizer
-
+import sys
+sys.setrecursionlimit(10000)
 
 
 chan_feature_files = glob.glob(sys.argv[1])
+label_index = int(sys.argv[2])
 time_stamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
 
 if os.path.exists("chan_feature_df.parquet"):
@@ -32,7 +34,7 @@ else:
         with open(chan_feature_file) as f:
             for line in f:
                 cols = line.strip().split("\t")
-                label = cols[1].split("__")[0]
+                label = cols[1].split("__")[label_index]
                 if label not in ["1low", "1high", "2low", "2high", "0"]:
                     continue
                 try:
